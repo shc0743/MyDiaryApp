@@ -20,7 +20,6 @@ export default defineConfig({
   },
   build: {
     target: 'es2022',
-    sourcemap: true,
     rollupOptions: {
       external: ['../../lib/encryption/main.bundle.js']
     }

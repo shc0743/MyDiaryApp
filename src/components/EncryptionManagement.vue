@@ -43,9 +43,9 @@ async function enc_entries() {
         await ElMessageBox.confirm('确定要加密应用程序吗？', '加密', {
             type: 'warning', confirmButtonText: '立即加密', cancelButtonText: '不要加密'
         });
-        pwd = await ElMessageBox.prompt('请设置密码。', '加密', {
+        pwd = (await ElMessageBox.prompt('请设置密码。', '加密', {
             type: 'info', confirmButtonText: '立即加密', cancelButtonText: '不要加密'
-        }); if (!pwd) return;
+        })).value; if (!pwd) return;
     } catch { return };
 
     // 加密
