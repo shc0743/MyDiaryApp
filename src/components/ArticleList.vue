@@ -1,6 +1,9 @@
 <template>
     <div class="app">
-        <h2 style="margin-top: 0;">文章列表<a href="javascript:" @click.prevent="loadArticles()" style="margin-left: 1em; font-size: x-small; font-weight: normal;">加载</a></h2>
+        <h2 style="margin-top: 0;">
+            <span>文章列表</span>
+            <a href="javascript:" @click.prevent="loadArticles()" style="margin-left: 1em; font-size: x-small; font-weight: normal;">加载</a>
+        </h2>
         <div style="display: flex; margin-bottom: 0.5em;">
             <el-input v-model="searchKeyword" clearable placeholder=搜索... />
             <el-button @click="showFilter ? (showFilter = false) : (showFilter = true)" style="margin-left: 0.5em;">筛选</el-button>
@@ -95,12 +98,6 @@ emit('update-title', '文章列表')
 
 const router = useRouter()
 
-onMounted(() => {
-    if (!props.credits.oss_url || !props.credits.ak || !props.credits.sk ||!props.credits.bucket ||!props.credits.region) {
-        router.push('/login/')
-    }
-})
-
 const searchKeyword = ref('')
 const showFilter = ref(false)
 
@@ -147,6 +144,10 @@ onMounted(async () => {
 import { sign_url } from '../../lib/util/sign';
 async function loadArticles() {
     try {
+        if (!props.credits.oss_url || !props.credits.ak || !props.credits.sk || !props.credits.bucket || !props.credits.region) {
+            router.push('/login/')
+            return
+        }
         const data = await load_entries_index(props.credits, true);
         articles.value = data;
     }

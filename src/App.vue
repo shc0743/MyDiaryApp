@@ -25,6 +25,7 @@
                     <ElMenuItem index="#new">新文章</ElMenuItem>
                     <ElMenuItem index="#save">保存更改</ElMenuItem>
                 </ElSubMenu>
+                <ElMenuItem index="#em">加密管理中心</ElMenuItem>
                 <ElMenuItem index="#u">{{credits.sk ? "已登入" : "登入"}}</ElMenuItem>
                 <ElMenuItem index="#x">关闭菜单</ElMenuItem>
             </ElMenu>
@@ -53,13 +54,27 @@
     </resizable-widget>
     <!-- copyrightBox -->
 
-
+    <dialog ref="dlgInputPasswd" @close="doneInputPasswd(false)" style="width: 240px;">
+        <form method="dialog">
+            <div style="font-size: large; margin-bottom: 0.5em;">啊~哦!</div>
+            <div style="margin-bottom: 0.5em;">此内容已加密。<br>输入密码:</div>
+            <el-input v-model="userInputPasswd" type="password" clearable show-password />
+            <div style="margin-top: 0.5em; display: flex; justify-content: space-between; align-items: center;">
+                <ElCheckbox v-model="userSavePasswd">保存</ElCheckbox>
+                <div style="display: flex; align-items: center;">
+                    <el-button @click="doneInputPasswd(false)">取消</el-button>
+                    <el-button type="primary" plain @click="doneInputPasswd(true)">解密</el-button>
+                </div>
+            </div>            
+        </form>
+    </dialog>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
 import { Expand, Fold } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
+import { ElCheckbox } from 'element-plus'
 const router = useRouter()
 
 const title = ref('')
@@ -86,6 +101,35 @@ const credits = ref({
     region: '',
 })
 
+const dlgInputPasswd = ref(null)
+const userInputPasswd = ref('')
+const userSavePasswd = ref(false)
+const userInputPasswdFn = ref({})
+
+function requestInputPasswd() {
+    return new Promise((resolve, reject) => {
+        dlgInputPasswd.value.showModal()
+        userInputPasswdFn.value.resolve = resolve;
+        userInputPasswdFn.value.reject = reject;
+        userInputPasswd.value = '';
+    })
+}
+
+const api = {
+    requestInputPasswd
+}
+defineExpose(api)
+onMounted(async () => {
+    await nextTick()
+    globalThis.appComponent = api
+})
+
+function doneInputPasswd(ok) {
+    if (!ok) userInputPasswdFn.value.reject?.();
+    else userInputPasswdFn.value.resolve?.({ value: userInputPasswd.value, save: userSavePasswd.value });
+    dlgInputPasswd.value.close()
+}
+
 try {
     const data = u.get('LogonData');
     if (!data) throw -1;
@@ -106,6 +150,9 @@ function handleAppMenuSelect(data) {
         case '#editor':
         case '#new':
             router.push('/editor/');
+            break;
+        case '#em':
+            router.push('/encryption/management');
             break;
         case '#u':
             router.push('/login/');

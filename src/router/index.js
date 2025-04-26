@@ -2,6 +2,7 @@ import { createRouter, createWebHashHistory } from 'vue-router'
 import LoginForm from '../components/LoginForm.vue'
 import ArticleList from '../components/ArticleList.vue'
 import EditorMain from '../components/EditorMain.vue'
+import EncryptionManagement from '../components/EncryptionManagement.vue'
 
 const routes = [
     {
@@ -29,6 +30,10 @@ const routes = [
         path: '/editor/:articleId',  // 动态路由
         component: EditorMain,
         props: true  // 将路由参数作为props传递
+    },
+    {
+        path: '/encryption/management',
+        component: EncryptionManagement
     },
 ]
 
