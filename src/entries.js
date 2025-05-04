@@ -1,12 +1,12 @@
 import { sign_url } from "../lib/util/sign.js";
-import { encrypt_file, decrypt_file } from "simple-web-encryption";
+import { encrypt_file, decrypt_file, decrypt_data } from "simple-web-encryption";
 
 export const file_inmemory_encrypt = async (blob, password) => {
     const buffer = [];
     const file_reader = async (start, end) => new Uint8Array(await (blob.slice(start, end).arrayBuffer()));
     const file_writer = (data) => buffer.push(data);
     await encrypt_file(file_reader, file_writer, password);
-    return (await new Blob(buffer).text());
+    return (new Blob(buffer));
 }
 export const file_inmemory_decrypt = async (blob, password) => {
     const buffer = [];
@@ -19,10 +19,10 @@ export const file_inmemory_decrypt = async (blob, password) => {
 const dynamic_decrypt = async (data) => {
     const possible = (await u.get('saved_passwords')) || [];
     for (const i of possible) try {
-        return JSON.parse(await file_inmemory_decrypt(data, i));
+        return (await file_inmemory_decrypt(data, i));
     } catch { }
     const p = await globalThis.appComponent.requestInputPasswd();
-    const d = JSON.parse(await file_inmemory_decrypt(data, p.value));
+    const d = (await file_inmemory_decrypt(data, p.value));
     if (p.save) {
         possible.push(p.value);
         u.set('saved_passwords', possible);
@@ -32,6 +32,8 @@ const dynamic_decrypt = async (data) => {
 
 
 globalThis.load_entries_index = async (credits, purge = false) => {
+    if (!credits.loaded) await credits.prom;
+
     if (!purge && load_entries_index.__cache__) {
         return load_entries_index.__cache__;
     }
@@ -48,7 +50,7 @@ globalThis.load_entries_index = async (credits, purge = false) => {
     switch (resp.status) {
         case 200: {
             let data = await resp.blob();
-            if ((await data.slice(0, 13).text()) === 'MyEncryption') {
+            if ((await data.slice(0, 13).text()) === 'MyEncryption/') {
                 data = await dynamic_decrypt(data);
             } else {
                 data = await data.text();
@@ -158,15 +160,42 @@ function signit(url, method = 'GET', headers = {}) {
  * @param {string} id secret id
  */
 export async function get_secret_info(id) {
-    
+    try {
+        const url = new URL(`./secrets/data/${id}`, window.location.origin);
+        const signedUrl = await signit(url);
+        const response = await fetch(signedUrl);
+        if (!response.ok) return null;
+        return await response.json();
+    } catch {
+        return null;
+    }
 }
 /**
  * 获取用于加密操作的secret key
  * @param {string} id secret id
  * @param {string} password secret password
+ * @param {null|string} [name] 密码的name
  */
-export async function get_secret_key(id, password) {
+export async function get_secret_key(id, password, name = null) {
+    const secretInfo = await get_secret_info(id);
+    if (!secretInfo) return null;
     
+    try {
+        if (name) {
+            if (!secretInfo.primary_key || !secretInfo.primary_key[name]) return null;
+            return await decrypt_data(secretInfo.primary_key[name], password);
+        } else {
+            if (!secretInfo.primary_key) return null;
+            for (const key of Reflect.ownKeys(secretInfo.primary_key)) {
+                try {
+                    return await decrypt_data(secretInfo.primary_key[key], password);
+                } catch {}
+            }
+            return null;
+        }
+    } catch {
+        return null;
+    }
 }
 /**
  * 获取默认id

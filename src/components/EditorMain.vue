@@ -72,10 +72,7 @@ const props = defineProps({
 // 初始化文章数据
 const initArticle = () => ({
     title: '',
-    content: {
-        type: 'doc',
-        content: ''
-    },
+    content: '',
     author: '',
     tags: [],
     categories: [],
@@ -88,6 +85,11 @@ const secret_encryption_key = ref('');
 
 // 加载文章数据
 const load_article = async (id) => {
+    if (id === 'new' || id === '') {
+        article.value = initArticle();
+        secret_id.value = await get_secret_default_id();
+        return;
+    }
     try {
         const data = await load_entries_index(props.credits);
         const article_data = data.find(item => item.id === id);
@@ -99,10 +101,7 @@ const load_article = async (id) => {
             return;
         }
         article.value = Object.assign({
-            content: {
-                type: 'doc',
-                content: '<p>正在加载文章，请稍候...</p>'
-            },
+            content: '<p>正在加载文章，请稍候...</p>',
         }, article_data);
         // 获取文件内容
         const url = new URL(`./entries/${article_data.id}`, props.credits.oss_url);
@@ -145,6 +144,7 @@ const update_title = (() => {
 onMounted(async () => {
     update_title();
     if (props.articleId) load_article(props.articleId);
+    await props.credits.prom; // wait for credits to be setup
     secret_id.value = await get_secret_default_id();
     if (!secret_id.value) {
         ElMessageBox.alert("没有找到默认 Secret，无法加密。", '加密异常', {
@@ -211,7 +211,7 @@ const save_article = async () => {
         const resp = await fetch(signed_url, {
             method: 'PUT',
             headers: head,
-            body: JSON.stringify(article.value.content)
+            body: (article.value.content)
         });
         if (!resp.ok) throw `HTTP Error ${resp.status}: ${resp.statusText}`;
         

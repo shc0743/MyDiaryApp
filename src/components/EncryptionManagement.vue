@@ -21,6 +21,7 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import { sign_url } from '../../lib/util/sign.js';
 import { encrypt_data } from 'simple-web-encryption';
 import { ref, computed } from 'vue'
+import { file_inmemory_encrypt } from '../entries.js';
 
 const emit = defineEmits(['update-title'])
 const props = defineProps({
@@ -40,7 +41,7 @@ emit('update-title', '加密管理中心')
 async function enc_entries() {
     let pwd;
     try {
-        await ElMessageBox.confirm('确定要加密应用程序吗？', '加密', {
+        await ElMessageBox.confirm('确定要加密索引文件吗？', '加密', {
             type: 'warning', confirmButtonText: '立即加密', cancelButtonText: '不要加密'
         });
         pwd = (await ElMessageBox.prompt('请设置密码。', '加密', {
@@ -58,7 +59,7 @@ async function enc_entries() {
             type: 'x-my-diary-app-entries-list',
             entries: latest_index,
         }, null, 2);
-        const encrypted = await encrypt_data(str, pwd);
+        const encrypted = await file_inmemory_encrypt(new Blob([str]), pwd);
 
         // 保存
         const head = {
