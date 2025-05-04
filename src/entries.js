@@ -1,16 +1,31 @@
 import { sign_url } from "../lib/util/sign.js";
-import { decrypt_data } from "../lib/encryption/main.bundle.js";
+import { encrypt_file, decrypt_file } from "simple-web-encryption";
+
+export const file_inmemory_encrypt = async (blob, password) => {
+    const buffer = [];
+    const file_reader = async (start, end) => new Uint8Array(await (blob.slice(start, end).arrayBuffer()));
+    const file_writer = (data) => buffer.push(data);
+    await encrypt_file(file_reader, file_writer, password);
+    return (await new Blob(buffer).text());
+}
+export const file_inmemory_decrypt = async (blob, password) => {
+    const buffer = [];
+    const file_reader = async (start, end) => new Uint8Array(await (blob.slice(start, end).arrayBuffer()));
+    const file_writer = (data) => buffer.push(data);
+    await decrypt_file(file_reader, file_writer, password);
+    return (await new Blob(buffer).text());
+}
 
 const dynamic_decrypt = async (data) => {
-    const possible = (u.get('SavedPass')) ? (u.get('SavedPass').split("^_|_^")) : [];
+    const possible = (await u.get('saved_passwords')) || [];
     for (const i of possible) try {
-        return await decrypt_data(JSON.stringify(data), i);
+        return JSON.parse(await file_inmemory_decrypt(data, i));
     } catch { }
     const p = await globalThis.appComponent.requestInputPasswd();
-    const d = await decrypt_data(JSON.stringify(data), p.value);
+    const d = JSON.parse(await file_inmemory_decrypt(data, p.value));
     if (p.save) {
         possible.push(p.value);
-        u.set('SavedPass', possible.join("^_|_^"))
+        u.set('saved_passwords', possible);
     }
     return d;
 };
@@ -32,11 +47,14 @@ globalThis.load_entries_index = async (credits, purge = false) => {
     const resp = await fetch(signed_url);
     switch (resp.status) {
         case 200: {
-            let data = await resp.json();
-            if (data && data["v"] === 5.5 && !data.entries) {
+            let data = await resp.blob();
+            if ((await data.slice(0, 13).text()) === 'MyEncryption') {
                 data = await dynamic_decrypt(data);
+            } else {
+                data = await data.text();
             }
             // 检查返回的JSON数据是否符合指定格式
+            data = JSON.parse(data);
             if (!data || typeof data !== 'object' || data.version !== 1 || data.schema_version !== 1 || data.type !== 'x-my-diary-app-entries-list' || !Array.isArray(data.entries)) {
                 return [];
             }
@@ -121,4 +139,45 @@ globalThis.save_entries_index = async (credits, entry) => {
     });
     if (resp.ok == false) throw `HTTP Error ${resp.status}: ${resp.statusText}`;
     return true
+}
+
+function signit(url, method = 'GET', headers = {}) {
+    return sign_url(url, {
+        access_key_id: globalThis.appComponent.get_credit().ak,
+        access_key_secret: globalThis.appComponent.get_credit().sk,
+        bucket: globalThis.appComponent.get_credit().bucket,
+        region: globalThis.appComponent.get_credit().region,
+        expires: 30,
+        method,
+        additionalHeadersList: headers
+    })
+}
+
+/**
+ * 获取secret信息
+ * @param {string} id secret id
+ */
+export async function get_secret_info(id) {
+    
+}
+/**
+ * 获取用于加密操作的secret key
+ * @param {string} id secret id
+ * @param {string} password secret password
+ */
+export async function get_secret_key(id, password) {
+    
+}
+/**
+ * 获取默认id
+ * @returns {Promise<string|null>} id，可能没有
+ */
+export async function get_secret_default_id() {
+    try {
+        const url = new URL('./secrets/default', globalThis.appComponent.get_credit().oss_url);
+        const signed = await signit(url);
+        const resp = await fetch(signed);
+        if (!resp.ok) throw 404;
+        return await resp.text();
+    } catch { return null; }
 }

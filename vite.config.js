@@ -21,8 +21,17 @@ export default defineConfig({
   build: {
     target: 'es2022',
     rollupOptions: {
-      external: ['../../lib/encryption/main.bundle.js']
-    }
+      external: ["simple-web-encryption"],
+    },
+    chunkSizeWarningLimit: 4096
+  },
+  optimizeDeps: {
+    esbuildOptions: {
+      target: 'es2022' // 确保设置为支持 top-level await 的版本
+    },
+    exclude: [
+      "simple-web-encryption",
+    ]
   },
   base: '/webstatic/my-diary-app/'
 })

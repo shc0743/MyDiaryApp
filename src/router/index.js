@@ -33,7 +33,16 @@ const routes = [
     },
     {
         path: '/encryption/management',
-        component: EncryptionManagement
+        component: () => import('../components/EncryptionManagement.vue')
+    },
+    {
+        path: '/secret/management',
+        component: () => import('../components/SecretManagement.vue')
+    },
+    {
+        path: '/secret/management.STAGING',
+        component: () => import('../components/SecretManagement.vue'),
+        props: { staging: true }  // 传递staging为true
     },
 ]
 

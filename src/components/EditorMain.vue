@@ -13,6 +13,12 @@
             </div>
 
             <div class="info-item">
+                <el-icon><Clock /></el-icon>
+                <span>创建时间:</span>
+                <ElDatePicker v-model="article.created" type="datetime" style="width: 100%;" />
+            </div>
+
+            <div class="info-item">
                 <el-icon><CollectionTag /></el-icon>
                 <span>标签:</span>
                 <el-input-tag v-model="article.tags" placeholder="输入标签" trigger="Space" />
@@ -22,6 +28,13 @@
                 <el-icon><Folder /></el-icon>
                 <span>分类:</span>
                 <el-input-tag v-model="article.categories" placeholder="输入分类" trigger="Space" />
+            </div>
+
+            <div class="info-item">
+                <el-icon><Lock /></el-icon>
+                <span>访问控制:</span>
+                <span style="margin: 0 0.5em">使用 ID 为 {{ secret_id }} 的 Secret</span>
+                <el-button size="small">管理</el-button>
             </div>
         </div>
 
@@ -39,8 +52,8 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import Tiptap from './Tiptap.vue'
-import { User, CollectionTag, Folder, DocumentAdd } from '@element-plus/icons-vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { User, CollectionTag, Folder, DocumentAdd, Clock, Lock } from '@element-plus/icons-vue'
+import { ElDatePicker, ElMessage, ElMessageBox } from 'element-plus'
 import { sign_url } from '../../lib/util/sign'
 
 const router = useRouter()
@@ -53,13 +66,7 @@ const props = defineProps({
     },
     credits: {
         type: Object,
-        default: () => ({
-            oss_url: '',
-            ak: '',
-            sk: '',
-            bucket: '',
-            region: '',
-        })
+        required: true
     },
 })
 // 初始化文章数据
@@ -67,9 +74,7 @@ const initArticle = () => ({
     title: '',
     content: {
         type: 'doc',
-        content: [
-            { type: 'paragraph', content: [] }
-        ]
+        content: ''
     },
     author: '',
     tags: [],
@@ -78,6 +83,8 @@ const initArticle = () => ({
 })
 
 const article = ref(initArticle())
+const secret_id = ref('');
+const secret_encryption_key = ref('');
 
 // 加载文章数据
 const load_article = async (id) => {
@@ -94,9 +101,7 @@ const load_article = async (id) => {
         article.value = Object.assign({
             content: {
                 type: 'doc',
-                content: [
-                    { type: 'paragraph', content: [{ type: "text", text: '正在加载文章，请稍候...' }] }
-                ]
+                content: '<p>正在加载文章，请稍候...</p>'
             },
         }, article_data);
         // 获取文件内容
@@ -117,7 +122,7 @@ const load_article = async (id) => {
             return;
         }
         if (!resp.ok) throw `HTTP Error ${resp.status}: ${resp.statusText}`;
-        article.value.content = await resp.json();
+        article.value.content = await resp.text();
     }
     catch (error) {
         ElMessageBox.alert('加载文章列表失败，请稍后重试。' + error, '错误', {
@@ -137,12 +142,22 @@ const update_title = (() => {
     if (t.length > 10) t = t.substring(0, 10) + '…'
     emit('update-title', `文章编辑器 - [${t || '新文章'}]`)
 });
-onMounted(() => {
+onMounted(async () => {
     update_title();
     if (props.articleId) load_article(props.articleId);
+    secret_id.value = await get_secret_default_id();
+    if (!secret_id.value) {
+        ElMessageBox.alert("没有找到默认 Secret，无法加密。", '加密异常', {
+            confirmButtonText: "前往设置",
+            type: "error"
+        }).catch(() => { }).finally(() => {
+            router.push("/secret/management");
+        })
+    }
 })
 
 import { watch } from 'vue'
+import { get_secret_default_id } from '../entries'
 
 // 监听 article.value.title 的变化，变化时调用 update_title 函数
 watch(() => article.value.title, () => {
@@ -236,7 +251,7 @@ const save_article = async () => {
         const resp = await fetch(signed_url, {
             method: 'PUT',
             headers: head,
-            body: JSON.stringify(article.value.content)
+            body: (article.value.content)
         });
         if (!resp.ok) throw `HTTP Error ${resp.status}: ${resp.statusText}`;
 
@@ -278,14 +293,14 @@ const insert_html = () => {
     align-items: center;
     position: sticky;
     top: 0;
-    z-index: 20;
+    z-index: 21;
+    border-bottom: 1px solid gray;
 }
 .article-title > input  {
     border: 0;
     margin: 0;
     flex: 1;
     outline: 0 !important;
-    border-bottom: 1px solid gray;
     padding: 10px;
     font-size: 1.5em;
     font-family: NSimsun, Simsun, "宋体", sans-serif;
@@ -312,7 +327,7 @@ const insert_html = () => {
         --bg: #222222;
         --text-color: #ffffff;
     }
-    .article-title > input {
+    .article-title {
         border-bottom: 1px solid #111;
     }
    .sep-line {

@@ -63,7 +63,7 @@ const handleSubmit = () => {
     if (!form_data.value.save_password) {
         data.sk = undefined
     }
-    u.set('LogonData', JSON.stringify(data))
+    u.set('LogonData', (data))
     emit('update-credits', form_data.value) // 传递新的 credits 值给父组件 (..)
     router.push('/list/')
 }

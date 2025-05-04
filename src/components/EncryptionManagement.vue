@@ -19,7 +19,7 @@
 <script setup>
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { sign_url } from '../../lib/util/sign.js';
-import { encrypt_data } from '../../lib/encryption/main.bundle.js';
+import { encrypt_data } from 'simple-web-encryption';
 import { ref, computed } from 'vue'
 
 const emit = defineEmits(['update-title'])

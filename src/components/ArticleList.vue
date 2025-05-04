@@ -85,13 +85,7 @@ const emit = defineEmits(['update-title'])
 const props = defineProps({
     credits: {
         type: Object,
-        default: () => ({
-            oss_url: '',
-            ak: '',
-            sk: '',
-            bucket: '',
-            region: '',
-        })
+        required: true
     }
 })
 emit('update-title', '文章列表')
@@ -144,10 +138,11 @@ onMounted(async () => {
 import { sign_url } from '../../lib/util/sign';
 async function loadArticles() {
     try {
-        if (!props.credits.oss_url || !props.credits.ak || !props.credits.sk || !props.credits.bucket || !props.credits.region) {
+        if (props.credits.loaded && (!props.credits.oss_url || !props.credits.ak || !props.credits.sk || !props.credits.bucket || !props.credits.region)) {
             router.push('/login/')
             return
         }
+        await props.credits.prom;
         const data = await load_entries_index(props.credits, true);
         articles.value = data;
     }

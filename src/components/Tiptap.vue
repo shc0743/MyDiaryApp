@@ -1,13 +1,17 @@
 <template>
     <bubble-menu :editor="editor" :tippy-options="{ duration: 100 }" v-if="editor">
         <div class="bubble-menu">
-            <button @click="editor.chain().focus().toggleBold().run()"
-                :class="{ 'is-active': editor.isActive('bold') }">
-                粗体
+            <button @click="editor.chain().focus().toggleBold().run()" :class="{ 'is-active': editor.isActive('bold') }">
+                <b>B</b>
             </button>
-            <button @click="editor.chain().focus().toggleItalic().run()"
-                :class="{ 'is-active': editor.isActive('italic') }">
-                斜体
+            <button @click="editor.chain().focus().toggleItalic().run()" :class="{ 'is-active': editor.isActive('italic') }">
+                <i>I</i>
+            </button>
+            <button @click="editor.chain().focus().toggleStrike().run()" :class="{ 'is-active': editor.isActive('strike') }">
+                <s>S</s>
+            </button>
+            <button @click="console.dir(editor.chain().focus())">
+                TEST
             </button>
             <button @click="copySelectedText">
                 复制
@@ -49,7 +53,7 @@ export default {
 
     props: {
         modelValue: {
-            type: Object,
+            type: String,
             default: '',
         },
     },
@@ -65,10 +69,10 @@ export default {
     watch: {
         modelValue(value) {
             // HTML
-            // const isSame = this.editor.getHTML() === value
+            const isSame = this.editor.getHTML() === value
 
             // JSON
-            const isSame = JSON.stringify(this.editor.getJSON()) === JSON.stringify(value)
+            // const isSame = JSON.stringify(this.editor.getJSON()) === JSON.stringify(value)
 
             if (isSame) {
                 return
@@ -91,10 +95,10 @@ export default {
             },
             onUpdate: () => {
                 // HTML
-                // this.$emit('update:modelValue', this.editor.getHTML())
+                this.$emit('update:modelValue', this.editor.getHTML())
 
                 // JSON
-                this.$emit('update:modelValue', this.editor.getJSON())
+                // this.$emit('update:modelValue', this.editor.getJSON())
             },
         })
     },

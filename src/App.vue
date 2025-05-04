@@ -26,6 +26,7 @@
                     <ElMenuItem index="#save">保存更改</ElMenuItem>
                 </ElSubMenu>
                 <ElMenuItem index="#em">加密管理中心</ElMenuItem>
+                <ElMenuItem index="#secm">Secret 管理</ElMenuItem>
                 <ElMenuItem index="#u">{{credits.sk ? "已登入" : "登入"}}</ElMenuItem>
                 <ElMenuItem index="#x">关闭菜单</ElMenuItem>
             </ElMenu>
@@ -55,12 +56,19 @@
     <!-- copyrightBox -->
 
     <dialog ref="dlgInputPasswd" @close="doneInputPasswd(false)" style="width: 240px;">
-        <form method="dialog">
+        <form method="dialog" @submit.prevent="doneInputPasswd(true)">
             <div style="font-size: large; margin-bottom: 0.5em;">啊~哦!</div>
-            <div style="margin-bottom: 0.5em;">此内容已加密。<br>输入密码:</div>
-            <el-input v-model="userInputPasswd" type="password" clearable show-password />
+            <div style="margin-bottom: 0.5em;">此内容已加密。</div>
+            <div style="margin-bottom: 0.5em; white-space: nowrap; overflow: hidden;">密码:&nbsp;<select v-model="userInputPasswdSelectedOption">
+                <option value="_">自动选择</option>
+                <option v-for="option in userInputPasswdOptionsList" :key="option" :value="option">
+                    {{option}}
+                </option>
+            </select></div>
+            <div style="margin-bottom: 0.5em;">输入密码:</div>
+            <el-input v-model="userInputPasswd" autofocus type="password" clearable show-password />
             <div style="margin-top: 0.5em; display: flex; justify-content: space-between; align-items: center;">
-                <ElCheckbox v-model="userSavePasswd">保存</ElCheckbox>
+                <ElCheckbox v-model="userSavePasswd" :disabled="userCanSavePasswd == false">保存</ElCheckbox>
                 <div style="display: flex; align-items: center;">
                     <el-button @click="doneInputPasswd(false)">取消</el-button>
                     <el-button type="primary" plain @click="doneInputPasswd(true)">解密</el-button>
@@ -71,10 +79,10 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, onMounted, nextTick, h } from 'vue'
 import { Expand, Fold } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
-import { ElCheckbox } from 'element-plus'
+import { ElCheckbox, ElMessageBox } from 'element-plus'
 const router = useRouter()
 
 const title = ref('')
@@ -93,30 +101,60 @@ const updateCredits = (newCredits) => {
     credits.value = newCredits
 }
 
-const credits = ref({
+let credits
+credits = ref({
     oss_url: '',
     ak: '',
     sk: '',
     bucket: '',
     region: '',
+    loaded: false,
+    prom: new Promise(async (resolve, reject) => {
+        await new Promise(r => requestAnimationFrame(r));
+        credits.prom_resolve = resolve;
+    }),
 })
 
 const dlgInputPasswd = ref(null)
 const userInputPasswd = ref('')
 const userSavePasswd = ref(false)
+const userCanSavePasswd = ref(false)
 const userInputPasswdFn = ref({})
-
-function requestInputPasswd() {
+const userInputPasswdOptionsList = ref([])
+const userInputPasswdSelectedOption = ref('_')
+function requestInputPasswd(passwordOptionsList = [], allow_Save = true) {
     return new Promise((resolve, reject) => {
         dlgInputPasswd.value.showModal()
         userInputPasswdFn.value.resolve = resolve;
         userInputPasswdFn.value.reject = reject;
         userInputPasswd.value = '';
+        userSavePasswd.value = false;
+        userCanSavePasswd.value = !!allow_Save;
+        userInputPasswdOptionsList.value = passwordOptionsList;
+        userInputPasswdSelectedOption.value = '_';
     })
 }
 
+async function requestOtpConfirm(operation, text) {
+    const { value } = await ElMessageBox.prompt(h('div', [], [
+        h('div', [], `您正在执行[${operation}]，请输入动态验证码以继续。`),
+        h('div', { style: { 'margin-top': '0.5em' } }, text),
+    ]), '请确认此操作', {
+        confirmButtonText: '执行此操作',
+        cancelButtonText: '不要执行',
+        type: 'warning',
+    });
+    return value;
+}
+
+function get_credit() {
+    return credits.value
+}
+
 const api = {
-    requestInputPasswd
+    requestInputPasswd,
+    requestOtpConfirm,
+    get_credit,
 }
 defineExpose(api)
 onMounted(async () => {
@@ -126,15 +164,21 @@ onMounted(async () => {
 
 function doneInputPasswd(ok) {
     if (!ok) userInputPasswdFn.value.reject?.();
-    else userInputPasswdFn.value.resolve?.({ value: userInputPasswd.value, save: userSavePasswd.value });
+    if (userInputPasswdSelectedOption.value === '_') userInputPasswdSelectedOption.value = '';
+    userInputPasswdFn.value.resolve?.({ value: userInputPasswd.value, save: userSavePasswd.value, option: userInputPasswdSelectedOption.value });
     dlgInputPasswd.value.close()
 }
 
-try {
-    const data = u.get('LogonData');
-    if (!data) throw -1;
-    credits.value = JSON.parse(data);
-} catch {}
+queueMicrotask(async () => {
+    await new Promise(r => requestAnimationFrame(r));
+    try {
+        const data = await u.get('LogonData');
+        if (!data) throw -1;
+        credits.value = (data);
+    } catch { }
+    credits.value.loaded = true;
+    credits.prom_resolve();
+})
 
 function handleAppMenuSelect(data) {
     switch (data) {
@@ -153,6 +197,9 @@ function handleAppMenuSelect(data) {
             break;
         case '#em':
             router.push('/encryption/management');
+            break;
+        case '#secm':
+            router.push('/secret/management');
             break;
         case '#u':
             router.push('/login/');
