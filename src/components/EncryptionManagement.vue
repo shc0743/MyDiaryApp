@@ -8,7 +8,7 @@
             <el-button @click="enc_entries">加密</el-button>
         </fieldset>
 
-        <fieldset>
+        <fieldset hidden>
             <legend>STAGING</legend>
 
             <el-button @click="test_requestInputPasswd">Test requestInputPasswd</el-button>

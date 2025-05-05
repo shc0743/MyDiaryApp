@@ -8,6 +8,12 @@
             <el-input v-model="searchKeyword" clearable placeholder=搜索... />
             <el-button @click="showFilter ? (showFilter = false) : (showFilter = true)" style="margin-left: 0.5em;">筛选</el-button>
         </div>
+        <div v-if="isLoading" style="margin-bottom: 0.5em; margin-top: 1em;">
+            <el-icon class="is-loading">
+                <RefreshRight />
+            </el-icon>
+            <span style="margin-left: 0.5em; display: inline-block;">正在获取文章列表...</span>
+        </div>
         <div v-if="showFilter" class="filter-area" style="border: 1px solid #ccc; margin-bottom: 0.5em; padding: 10px; border-radius: 5px;">
             <label>
                 <span class="label">日期:</span>
@@ -80,6 +86,7 @@ import { ElMessageBox } from 'element-plus'
 import { ref, computed } from 'vue'
 import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { RefreshRight } from '@element-plus/icons-vue'
 
 const emit = defineEmits(['update-title'])
 const props = defineProps({
@@ -136,6 +143,7 @@ onMounted(async () => {
 
 // 加载文章列表的函数
 import { sign_url } from '../../lib/util/sign';
+const isLoading = ref(false)
 async function loadArticles() {
     try {
         if (props.credits.loaded && (!props.credits.oss_url || !props.credits.ak || !props.credits.sk || !props.credits.bucket || !props.credits.region)) {
@@ -143,6 +151,7 @@ async function loadArticles() {
             return
         }
         await props.credits.prom;
+        isLoading.value = true;
         const data = await load_entries_index(props.credits, true);
         articles.value = data;
     }
@@ -151,6 +160,8 @@ async function loadArticles() {
             confirmButtonText: '确定',
             type: 'error',
         }).then(() => {}).catch(() => {})
+    } finally {
+        isLoading.value = false;
     }
 }
 </script>

@@ -122,6 +122,13 @@ const userCanSavePasswd = ref(false)
 const userInputPasswdFn = ref({})
 const userInputPasswdOptionsList = ref([])
 const userInputPasswdSelectedOption = ref('_')
+
+/**
+ * requestInputPasswd
+ * @param passwordOptionsList Password options list.
+ * @param allow_Save Configure if the user can save the password.
+ * @returns {Promise<{value: string, save: boolean, option: string}>}
+ */
 function requestInputPasswd(passwordOptionsList = [], allow_Save = true) {
     return new Promise((resolve, reject) => {
         dlgInputPasswd.value.showModal()

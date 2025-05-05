@@ -9,6 +9,9 @@ import router from './router'
 import './entries.js'
 import './userdata.js'
 
+globalThis.appid = 'com.mydiary.mydiaryapp'
+globalThis.uuid = 'fddd697a-d914-4e6b-82f4-52bf7bab296b'
+
 globalThis.u = {
     get(key) { return userdata.get('config', key) },
     set(key, value) { return userdata.put('config', value, key) },

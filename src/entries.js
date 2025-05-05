@@ -16,17 +16,22 @@ export const file_inmemory_decrypt = async (blob, password) => {
     return (await new Blob(buffer).text());
 }
 
+let this_time_password = null;
+
 const dynamic_decrypt = async (data) => {
     const possible = (await u.get('saved_passwords')) || [];
     for (const i of possible) try {
-        return (await file_inmemory_decrypt(data, i));
-    } catch { }
+        const r = (await file_inmemory_decrypt(data, i));
+        this_time_password = i;
+        return r;
+    } catch {}
     const p = await globalThis.appComponent.requestInputPasswd();
     const d = (await file_inmemory_decrypt(data, p.value));
     if (p.save) {
         possible.push(p.value);
         u.set('saved_passwords', possible);
     }
+    this_time_password = p.value;
     return d;
 };
 
@@ -120,30 +125,27 @@ globalThis.save_entries_index = async (credits, entry) => {
         'Content-Type': 'application/json',
     };
     const url = new URL('./data/entries.json', credits.oss_url);
-    const signed_url = await sign_url(url, {
-        access_key_id: credits.ak,
-        access_key_secret: credits.sk,
-        bucket: credits.bucket,
-        region: credits.region,
-        expires: 30,
-        method: 'PUT',
-        additionalHeadersList: head,
-    })
-    const resp = await fetch(signed_url, {
+
+    let body = JSON.stringify({
+        version: 1,
+        schema_version: 1,
+        type: 'x-my-diary-app-entries-list',
+        entries: latest_index,
+    });
+    if (this_time_password) {
+        body = (await file_inmemory_encrypt(new Blob([body]), this_time_password));
+    }
+
+    const resp = await fetch(await signit(url, 'PUT', head), {
         method: 'PUT',
         headers: head,
-        body: JSON.stringify({
-            version: 1,
-            schema_version: 1,
-            type: 'x-my-diary-app-entries-list',
-            entries: latest_index,
-        }, null, 2),
+        body,
     });
     if (resp.ok == false) throw `HTTP Error ${resp.status}: ${resp.statusText}`;
     return true
 }
 
-function signit(url, method = 'GET', headers = {}) {
+export function signit(url, method = 'GET', headers = {}) {
     return sign_url(url, {
         access_key_id: globalThis.appComponent.get_credit().ak,
         access_key_secret: globalThis.appComponent.get_credit().sk,
@@ -161,7 +163,7 @@ function signit(url, method = 'GET', headers = {}) {
  */
 export async function get_secret_info(id) {
     try {
-        const url = new URL(`./secrets/data/${id}`, window.location.origin);
+        const url = new URL(`./secrets/data/${id}`, globalThis.appComponent.get_credit().oss_url);
         const signedUrl = await signit(url);
         const response = await fetch(signedUrl);
         if (!response.ok) return null;
@@ -175,8 +177,10 @@ export async function get_secret_info(id) {
  * @param {string} id secret id
  * @param {string} password secret password
  * @param {null|string} [name] 密码的name
+ * @param {null|object} [name_ref] 如果没有提供name,则会把正确的name设置到name_ref.name上
+ * @returns {Promise<string|null>} key
  */
-export async function get_secret_key(id, password, name = null) {
+export async function get_secret_key(id, password, name = null, name_ref = null) {
     const secretInfo = await get_secret_info(id);
     if (!secretInfo) return null;
     
@@ -188,7 +192,9 @@ export async function get_secret_key(id, password, name = null) {
             if (!secretInfo.primary_key) return null;
             for (const key of Reflect.ownKeys(secretInfo.primary_key)) {
                 try {
-                    return await decrypt_data(secretInfo.primary_key[key], password);
+                    const data = await decrypt_data(secretInfo.primary_key[key], password);
+                    if (name_ref) name_ref.name = key;
+                    return data;
                 } catch {}
             }
             return null;
