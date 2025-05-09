@@ -142,7 +142,7 @@ onMounted(async () => {
 })
 
 // 加载文章列表的函数
-import { sign_url } from '../../lib/util/sign';
+import { sign_url } from 'alioss-sign-v4-util';
 const isLoading = ref(false)
 async function loadArticles() {
     try {

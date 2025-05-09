@@ -1,4 +1,4 @@
-import { sign_header, ISO8601 } from '../../lib/util/sign.js';
+import { sign_header, ISO8601 } from 'alioss-sign-v4-util';
 import { xml2json } from './xml2json.js';
 
 const xml_vcs_parse = (() => {

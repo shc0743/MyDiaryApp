@@ -15,9 +15,11 @@
     "@tiptap/pm": "^2.11.7",
     "@tiptap/starter-kit": "^2.11.7",
     "@tiptap/vue-3": "^2.11.7",
+    "alioss-sign-v4-util": "^1.0.0",
     "crypto-js": "^4.2.0",
     "element-plus": "^2.9.8",
     "idb": "^8.0.2",
+    "resizable-widget": "^1.1.0",
     "simple-web-encryption": "^1.2.49",
     "vue": "^3.5.13",
     "vue-router": "^4.5.0"

@@ -1,4 +1,4 @@
-import { sign_url } from "../lib/util/sign.js";
+import { sign_url } from "alioss-sign-v4-util";
 import { encrypt_file, decrypt_file, decrypt_data } from "simple-web-encryption";
 
 export const file_inmemory_encrypt = async (blob, password) => {

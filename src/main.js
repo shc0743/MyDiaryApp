@@ -29,7 +29,7 @@ globalThis.u = {
     },
 }
 
-import { registerResizableWidget } from '../lib/util/BindMove.js';
+import { registerResizableWidget } from 'resizable-widget';
 registerResizableWidget();
 
 const app = createApp(App)
