@@ -63,7 +63,9 @@
         <el-card v-for="article in filteredArticles" :key="article.id" style="margin-bottom: 1em;">
             <template #header>
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <span>{{ article.title || '无标题' }}</span>
+                    <span class="article-title" :title="(article.title && (
+                        article.title.length > 300 ? (article.title.substring(0, 300) + '…') : article.title
+                    )) || 'Untitled'">{{ article.title || '无标题' }}</span>
                     <div style="display: flex; align-items: center;">
                         <el-button @click="router.push(`/editor/${article.id}`)" >编辑</el-button>
                         <el-button @click="router.push(`/article/${article.id}`)" type="primary" plain>打开</el-button>
@@ -133,7 +135,7 @@ const filteredArticles = computed(() => {
                 article.categories.some(c => c.toLowerCase().includes(cat.toLowerCase())))
         
         return titleMatch && dateMatch && authorMatch && tagsMatch && categoriesMatch
-    })
+    }).sort((a, b) => +b.created - +a.created)
 })
 
 // 在挂载完成后加载文章列表
@@ -193,5 +195,10 @@ async function loadArticles() {
 }
 .article-details > div+div {
     margin-top: 0.5em;
+}
+.article-title {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 </style>

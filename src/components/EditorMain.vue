@@ -47,7 +47,7 @@
             </div>
         </div>
 
-        <div class="sep-line" style="margin: 0.5em 0;"></div>
+        <div class="sep-line" style="margin-top: 0.5em;"></div>
 
         <div class="floating-toolbar bg-auto" ref="toolbar" @wheel.passive="e => toolbar.scrollBy({ left: e.deltaY, top: 0, behavior: 'smooth' })">
             <div style="display: inline-block; width: 8.5em; color: gray; font-size: small;">{{ save_time ? `${save_time} 已保存` : "文章没有保存" }}</div>
@@ -150,6 +150,7 @@ async function setupSecretId() {
         })
     }
     secret_id_buffer.value = secret_id.value;
+    changes_list.value.secret_id = true;
 }
 
 async function getSecretEncKey() {
@@ -195,6 +196,12 @@ const settingsDialogOpen = ref(false)
 const artCreationTime = ref(new Date());
 const fontList = ref([]); // 字体列表
 const attachments = ref([]); // 附件列表
+// 文章元数据是否更改
+const changes_list = ref({
+    secret_id: false,
+    fontList: false,
+    attachmentsList: false,
+});
 
 // 加载文章数据
 const load_article = async (id) => {
@@ -202,27 +209,22 @@ const load_article = async (id) => {
     fontList.value.length = 0;
     attachments.value.length = 0;
     secret_id_Edit.value = {};
+    for (const i in changes_list.value) changes_list.value[i] = false;
     if (id === 'new' || id === '') {
         article.value = initArticle();
         await setupSecretId();
         return;
     }
     try {
-        const data = await load_entries_index(props.credits);
-        const article_data = data.find(item => item.id === id);
-        if (!article_data) { requestIdleCallback(() => {
-            ElMessageBox.alert('文章不存在。', '错误', {
-                confirmButtonText: '返回上一页',
-                type: 'error',
-            }).then(() => { }).catch(() => { }).finally(() => history.back())
-        }); return; }
-        article.value = Object.assign({
+        // const data = await load_entries_index(props.credits);
+        // const article_data = data.find(item => item.id === id);
+        article.value = Object.assign(initArticle(), {
             content: '<p>正在加载文章，请稍候...</p>',
-        }, article_data);
-        artCreationTime.value = new Date(+article.value.created);
+            title: "正在加载...",
+        });
         let url;
         // 获取文件元数据
-        url = new URL(`./entries/${article_data.id}`, props.credits.oss_url);
+        url = new URL(`./entries/${id}`, props.credits.oss_url);
         const resp_meta = await fetch(await signit(url));
         if (404 === resp_meta.status) {
             ElMessageBox.alert('文章不存在。', '错误', {
@@ -247,8 +249,22 @@ const load_article = async (id) => {
             history.back();
             return;
         }
+        // 获取元数据
+        const article_data = JSON.parse(await decrypt_data(meta.metadata, secret_encryption_key.value))
+        if (!article_data) {
+            requestIdleCallback(() => {
+                ElMessageBox.alert('文章不存在。', '错误', {
+                    confirmButtonText: '返回上一页',
+                    type: 'error',
+                }).then(() => { }).catch(() => { }).finally(() => history.back())
+            }); return;
+        }
+        article.value = Object.assign(article_data, {
+            content: '<p>正在加载文章内容，请稍候...</p>',
+        });
+        artCreationTime.value = new Date(+article.value.created);
         // 获取文件内容
-        url = new URL(`./content/${article_data.id}`, props.credits.oss_url);
+        url = new URL(`./content/${id}`, props.credits.oss_url);
         const resp = await fetch(await signit(url));
         if (404 === resp.status) {
             ElMessageBox.alert('文章数据异常。是否遭到了意外的外部更改？', '错误', {
@@ -258,7 +274,7 @@ const load_article = async (id) => {
             return;
         }
         if (!resp.ok) throw `HTTP Error ${resp.status}: ${resp.statusText}`;
-        OLEArticle.value = article.value;
+        OLEArticle.value = JSON.parse(JSON.stringify(article.value));
         const blob = await resp.blob();
         // 解密文件内容
         const decrypted = await file_inmemory_decrypt(blob, secret_encryption_key.value);
@@ -294,6 +310,7 @@ onMounted(async () => {
 
 import { watch } from 'vue'
 import { file_inmemory_decrypt, file_inmemory_encrypt, get_secret_default_id, get_secret_info, get_secret_key, signit } from '../entries'
+import { decrypt_data, encrypt_data } from 'simple-data-crypto/builder'
 
 // 监听 article.value.title 的变化，变化时调用 update_title 函数
 watch(() => article.value.title, () => {
@@ -390,43 +407,51 @@ const save_article_core = async () => {
         }
 
         let url, head, resp;
-        // 保存索引
-        url = new URL(`./entries/${article.value.id}`, props.credits.oss_url);
-        head = {
-            'Content-Type': 'application/json; charset=utf-8',
-        };
-        const entry_data = {
-            version: 1,
-            schema_version: 2,
-            appid: appid,
-            uuid: uuid,
-            // metadata: item, // 由于entry数据明文存储，我们不保存元数据，以保护用户隐私。
-            content: {
-                secret_id: secret_id.value,
-            },
-            content_policy: {
-                frames: {
-                    allow: true,
-                    allowed_domains: [],
-                    blocked_domains: [],
-                    policy: 'blacklist'
+        // 判断是否需要保存索引
+        if (
+            changes_list.value.secret_id ||
+            changes_list.value.fontList ||
+            changes_list.value.attachmentsList
+        ) {
+            // 保存索引
+            url = new URL(`./entries/${article.value.id}`, props.credits.oss_url);
+            head = {
+                'Content-Type': 'application/json; charset=utf-8',
+            };
+            const entry_data = {
+                version: 1,
+                schema_version: 2,
+                appid: appid,
+                uuid: uuid,
+                metadata: await encrypt_data(JSON.stringify(item), secret_encryption_key.value),
+                content: {
+                    secret_id: secret_id.value,
+                },
+                content_policy: {
+                    frames: {
+                        allow: true,
+                        allowed_domains: [],
+                        blocked_domains: [],
+                        policy: 'blacklist'
+                    },
+                    resources: {
+                        allow: true,
+                    },
                 },
                 resources: {
-                    allow: true,
+                    fonts: fontList.value,
+                    attachments: attachments.value,
                 },
-            },
-            resources: {
-                fonts: fontList.value,
-                attachments: attachments.value,
-            },
-        };
-        resp = await fetch(await signit(url, 'PUT', head), {
-            method: 'PUT',
-            headers: head,
-            body: JSON.stringify(entry_data)
-        });
-        if (!resp.ok) throw `HTTP Error ${resp.status}: ${resp.statusText}`;
+            };
+            resp = await fetch(await signit(url, 'PUT', head), {
+                method: 'PUT',
+                headers: head,
+                body: JSON.stringify(entry_data)
+            });
+            if (!resp.ok) throw `HTTP Error ${resp.status}: ${resp.statusText}`;
 
+            for (const i in changes_list.value) changes_list.value[i] = false;
+        }
         // 加密并保存文章内容
         url = new URL(`./content/${article.value.id}`, props.credits.oss_url);
         head = {
@@ -488,6 +513,7 @@ async function updateSecretEncryption() {
         ElMessage.error(`Secret 更新失败: ${e}`);
         return; // 终止执行，避免后续错误
     }
+    changes_list.value.secret_id = true;
     // 更新附件内容（待实现）
 
     // 重新加密文章内容
@@ -552,13 +578,16 @@ const insert_html = () => {
 }
 .floating-toolbar {
     border-bottom: 1px solid #ccc;
-    padding: 0 5px 0.5em 5px;
+    padding: 0.5em 5px 0.5em 5px;
     position: sticky;
     top: calc(1.5em + 10px + 10px + 4px);
     z-index: 20;
     white-space: nowrap;
     overflow-x: auto;
     overflow-y: hidden;
+    height: auto;
+    min-height: 2em;
+    box-sizing: content-box;
 }
 .floating-toolbar::-webkit-scrollbar {
     width: 0; height: 0;
