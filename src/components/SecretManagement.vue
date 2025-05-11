@@ -100,7 +100,7 @@ import { RefreshRight } from '@element-plus/icons-vue'
 import { exportContent } from '../ossapi/filelistapi.js';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { sign_url } from 'alioss-sign-v4-util';
-import { get_random_bytes, hexlify, encrypt_data, decrypt_data } from 'simple-web-encryption';
+import { get_random_bytes, hexlify, encrypt_data, decrypt_data } from 'simple-data-crypto/builder';
 import { generateQuestion } from '../relation.js';
 import { get_secret_default_id } from '../entries.js';
 

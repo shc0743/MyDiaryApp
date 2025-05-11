@@ -19,7 +19,7 @@
 <script setup>
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { sign_url } from 'alioss-sign-v4-util';
-import { encrypt_data } from 'simple-web-encryption';
+import { encrypt_data } from 'simple-data-crypto/builder';
 import { ref, computed } from 'vue'
 import { file_inmemory_encrypt } from '../entries.js';
 

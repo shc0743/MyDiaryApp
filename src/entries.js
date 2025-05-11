@@ -1,5 +1,5 @@
 import { sign_url } from "alioss-sign-v4-util";
-import { encrypt_file, decrypt_file, decrypt_data } from "simple-web-encryption";
+import { encrypt_file, decrypt_file, decrypt_data } from "simple-data-crypto/builder";
 
 export const file_inmemory_encrypt = async (blob, password) => {
     const buffer = [];
