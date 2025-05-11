@@ -388,12 +388,12 @@ const save_article_core = async () => {
             created: article.value.created,
         };
         // 判断是否需要更新索引
-        if (article.value.title !== OLEArticle.value.title ||
+        const metaChanged = article.value.title !== OLEArticle.value.title ||
             article.value.author !== OLEArticle.value.author ||
             article.value.tags.join('') !== OLEArticle.value.tags.join('') ||
             article.value.categories.join('') !== OLEArticle.value.categories.join('') ||
-            article.value.created !== OLEArticle.value.created
-        ) {
+            article.value.created !== OLEArticle.value.created;
+        if (metaChanged) {
             // 添加到索引
             await save_entries_index(props.credits, item);
 
@@ -411,7 +411,8 @@ const save_article_core = async () => {
         if (
             changes_list.value.secret_id ||
             changes_list.value.fontList ||
-            changes_list.value.attachmentsList
+            changes_list.value.attachmentsList ||
+            metaChanged
         ) {
             // 保存索引
             url = new URL(`./entries/${article.value.id}`, props.credits.oss_url);
