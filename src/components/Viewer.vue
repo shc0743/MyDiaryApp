@@ -26,7 +26,7 @@
                     <CollectionTag />
                 </el-icon>
                 <span>标签:</span>
-                <el-tag v-if="article.tags.length" v-for="tag in article.tags" :key="tag" size="small"
+                <el-tag v-for="tag in article.tags" :key="tag" size="small"
                     style="margin-right: 0.5em;">{{ tag }}</el-tag>
             </div>
 
@@ -35,7 +35,7 @@
                     <Folder />
                 </el-icon>
                 <span>分类:</span>
-                <el-tag v-if="article.tags.length" v-for="tag in article.tags" :key="tag" size="small" type="info"
+                <el-tag v-for="tag in article.categories" :key="tag" size="small" type="info"
                     style="margin-right: 0.5em;">{{ tag }}</el-tag>
             </div>
         </div>
