@@ -17,7 +17,7 @@ css.replace(`
     }
     simple-data-crypto-file-preview {
         border: 1px solid rgb(204, 204, 204);
-        max-height: 60vh;
+        max-height: 70vh;
         overflow: auto;
     }
     simple-data-crypto-file-preview.video {
@@ -26,7 +26,17 @@ css.replace(`
         height: 50vh;
         overflow: revert;
     }
+    simple-data-crypto-file-preview.image {
+        display: flex;
+        flex-direction: column;
+    }
 `)
+
+const fixImgPreviewCss = new CSSStyleSheet();
+fixImgPreviewCss.replace(`
+img { overflow: hidden }
+img.scale { overflow: revert }
+`);
 
 import 'simple-data-crypto-file-preview';
 import { Wrappers } from 'simple-data-crypto/builder';
@@ -126,6 +136,15 @@ export class HTMLXMyDiaryAppFileReferenceElement extends HTMLElement {
         this.#preview.title = `${name} (${id})`
         if (type.startsWith('video')) {
             this.#preview.classList.add('video');
+        }
+        if (type.startsWith('image')) {
+            this.#preview.classList.add('image');
+            // 需要处理图片的大小/比例问题，我们需要穿透多层shadowDOM；因此，做好准备！
+            requestAnimationFrame(() => {
+                const img_container = this.#preview.shadowRoot?.querySelector('common-file-preview')?.shadowRoot;
+                if (!img_container) return;
+                img_container.adoptedStyleSheets.push(fixImgPreviewCss);
+            })
         }
     }
 }
