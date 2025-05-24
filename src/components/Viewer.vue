@@ -200,7 +200,7 @@ const load_article = async (id) => {
         article.value = Object.assign(article_data, {
             content: '<p>正在加载文章内容，请稍候...</p>',
         });
-        emit('update-title', article_data.title + ' - 文章查看器')
+        update_title();
         // 获取文件内容
         url = new URL(`./content/${id}`, props.credits.oss_url);
         const resp = await fetch(await signit(url));
@@ -232,9 +232,14 @@ const load_article = async (id) => {
     }
 }
 
+const update_title = (() => {
+    let t = article.value?.title || ''
+    if (t.length > 10) t = t.substring(0, 10) + '…'
+    emit('update-title', `文章查看器 - [${t || ''}]`)
+});
 onMounted(async () => {
+    update_title();
     await props.credits.prom; // wait for credits to be setup
-    emit('update-title', '文章查看器')
     if (props.articleId) load_article(props.articleId);
     else {
         ElMessage.error("404 - 文章不存在。")
