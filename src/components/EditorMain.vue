@@ -96,7 +96,7 @@
             <el-button v-show="0"><el-icon><Switch /></el-icon>&nbsp;切换到 HTML 编辑器</el-button>
         </div>
 
-        <Tiptap class="tiptap t-el" v-model="article.content" ref="editor" />
+        <Tiptap class="tiptap t-el" v-model="article.content" ref="editor" @paste.capture="handle_paste" />
 
         <el-dialog v-model="settingsDialogOpen" title="高级设置" style="min-width: 400px; max-width: 800px;" align-center destroy-on-close draggable>
             <div style="display: flex; overflow: hidden; align-items: center;">
@@ -714,6 +714,23 @@ const onDrop = (event) => {
         dlgInsertObjectObjects.value.push(i)
     }
     dlgInsertObjectShow.value = true
+}
+const handle_paste = (event) => {
+    const clipboardData = event.clipboardData;
+    if (!clipboardData.files.length) return;
+    event.preventDefault()
+    event.stopPropagation();
+    const files = clipboardData.files;
+    (async () => {
+        for (const i of files) {
+            // // ensure the file is not *polluted* 
+            // const ab = await i.arrayBuffer();
+            // const u8 = new Uint8Array(ab);
+            // const buffer = new Blob([u8], i.type);
+            dlgInsertObjectObjects.value.push(i);
+        }
+        doInsertObject(true);
+    })();
 }
 
 

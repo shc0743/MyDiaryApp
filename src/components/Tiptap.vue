@@ -10,7 +10,7 @@
             <button @click="editor.chain().focus().toggleStrike().run()" :class="{ 'is-active': editor.isActive('strike') }">
                 <s>S</s>
             </button>
-            <button @click="editor.chain().focus().toggleUnderline().run()" :class="{ 'is-active': editor.isActive('strike') }">
+            <button @click="editor.chain().focus().toggleUnderline().run()" :class="{ 'is-active': editor.isActive('underline') }">
                 <u>U</u>
             </button>
             <button @click="copySelectedText">
