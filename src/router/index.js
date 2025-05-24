@@ -1,6 +1,7 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 import LoginForm from '../components/LoginForm.vue'
 import ArticleList from '../components/ArticleList.vue'
+import Viewer from '../components/Viewer.vue'
 import EditorMain from '../components/EditorMain.vue'
 import EncryptionManagement from '../components/EncryptionManagement.vue'
 
@@ -29,6 +30,11 @@ const routes = [
     {
         path: '/editor/:articleId',  // 动态路由
         component: EditorMain,
+        props: true  // 将路由参数作为props传递
+    },
+    {
+        path: '/article/:articleId',  // 动态路由
+        component: Viewer,
         props: true  // 将路由参数作为props传递
     },
     {

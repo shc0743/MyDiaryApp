@@ -11,9 +11,34 @@ button {
     cursor: pointer;
 }
 
+::selection {
+    background-color: rgb(141 199 248 / 60%);
+}
+
 /* tiptap content */
 .t-el {
     p {
-        margin: 0.5em 0;
+        margin: 0.5em 0 !important;
     }
+    .my-link {
+        color: blue !important;
+        text-decoration: underline dotted 1px !important;
+    }
+    .my-link:hover {
+        text-decoration: underline !important;
+    }
+    .my-link:active {
+        color: red !important;
+    }
+}
+.t-el[data-ctrl-pressed="true"] .my-link {
+    cursor: pointer !important;
+}
+.t-el[data-ctrl-pressed="true"] .my-link:hover {
+    color: #ff00ff !important;
+}
+
+
+x-my-diary-app-file-reference+x-my-diary-app-file-reference {
+    margin-top: 0.5em;
 }

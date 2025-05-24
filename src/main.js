@@ -8,6 +8,8 @@ import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
 import router from './router'
 import './entries.js'
 import './userdata.js'
+import './drv.js'
+import './secret-elementary.js'
 
 globalThis.appid = 'com.mydiary.mydiaryapp'
 globalThis.uuid = 'fddd697a-d914-4e6b-82f4-52bf7bab296b'

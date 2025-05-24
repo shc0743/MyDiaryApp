@@ -10,8 +10,8 @@
             <button @click="editor.chain().focus().toggleStrike().run()" :class="{ 'is-active': editor.isActive('strike') }">
                 <s>S</s>
             </button>
-            <button @click="console.dir(editor.chain().focus())">
-                TEST
+            <button @click="editor.chain().focus().toggleUnderline().run()" :class="{ 'is-active': editor.isActive('strike') }">
+                <u>U</u>
             </button>
             <button @click="copySelectedText">
                 复制
@@ -21,14 +21,62 @@
             </button>
         </div>
     </bubble-menu>
-    <editor-content data-editor :editor="editor" v-bind="$attrs" :class="$attrs.class" />
+    <editor-content data-editor :editor="editor" v-bind="$attrs" :class="$attrs.class"
+        @click.ctrl="tryOpenLink"
+        @keydown.ctrl="isCtrlPressed = true"
+        @keyup="isCtrlPressed = false"
+        @blur="isCtrlPressed = false"
+        :data-ctrl-pressed="isCtrlPressed"
+        />
 </template>
 
 <script>
-import StarterKit from '@tiptap/starter-kit'
 import { Editor, EditorContent, BubbleMenu } from '@tiptap/vue-3'
+import StarterKit from '@tiptap/starter-kit'
+import Link from '@tiptap/extension-link'
+import Table from '@tiptap/extension-table'
+import TableCell from '@tiptap/extension-table-cell'
+import TableHeader from '@tiptap/extension-table-header'
+import TableRow from '@tiptap/extension-table-row'
+import Underline from '@tiptap/extension-underline'
+import TextStyle from '@tiptap/extension-text-style'
+import Paragraph from '@tiptap/extension-paragraph'
+import { Node } from '@tiptap/core'
+import { Color } from '@tiptap/extension-color'
+import { ElMessage } from 'element-plus'
+
+const CustomFileReferenceWebComponent = Node.create({
+    name: 'x-my-diary-app-file-reference',
+    group: 'block',
+    renderHTML({ HTMLAttributes }) {
+        return ['x-my-diary-app-file-reference', HTMLAttributes];
+    },
+    parseHTML() {
+        return [{
+            tag: 'x-my-diary-app-file-reference',
+            getAttrs: dom => ({
+                'data-id': dom.getAttribute('data-id'),
+                'data-type': dom.getAttribute('data-type'),
+                'data-name': dom.getAttribute('data-name'),
+            })
+        }]
+    },
+    addAttributes() {
+        return {
+            'data-id': { default: null, },
+            'data-type': { default: null, },
+            'data-name': { default: null, },
+        };
+    },
+})
 
 export default {
+    data() {
+        return {
+            isCtrlPressed: false,
+        }
+    },
+
     components: {
         EditorContent,
         BubbleMenu,
@@ -48,7 +96,45 @@ export default {
             } catch (error) {
                 console.error('粘贴失败:', error)
             }
-        }
+        },
+        setLink(url) {
+            // cancelled
+            if (url === null) {
+                return
+            }
+            // empty
+            if (url === '') {
+                this.editor.chain().focus().extendMarkRange('link').unsetLink().run()
+                return
+            }
+            // update link
+            this.editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run()
+        },
+        getLink() {
+            return this.editor.getAttributes('link')?.href || ''
+        },
+        /**
+         * @param event {Event} event
+         */
+        tryOpenLink(event) {
+            // ctrl + click
+            let target = event.target
+            if (target.tagName !== 'A') {
+                target = target.parentElement
+                if (target.tagName !== 'A') {
+                    target = target.parentElement
+                    if (target.tagName !== 'A') return;
+                }
+            }
+            const href = target.href
+            if (href && href.startsWith('http')) {
+                setTimeout(() => {
+                    window.open(href, '_blank').focus();
+                }, 10);
+            } else {
+                ElMessage.error("不支持的链接: " + href);
+            }
+        },
     },
 
     props: {
@@ -86,6 +172,26 @@ export default {
         this.editor = new Editor({
             extensions: [
                 StarterKit,
+                CustomFileReferenceWebComponent,
+                Underline,
+                TextStyle,
+                Color,
+                Link.configure({
+                    openOnClick: false,
+                    HTMLAttributes: {
+                        target: '_blank',
+                        rel: 'noopener noreferrer',
+                        class: "my-link",
+                        title: "Follow Link (Ctrl + Click)"
+                    },
+                    autolink: true,
+                }),
+                Table.configure({
+                    resizable: true,
+                }),
+                TableRow,
+                TableHeader,
+                TableCell,
             ],
             content: this.modelValue,
             editorProps: {

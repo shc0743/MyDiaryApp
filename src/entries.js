@@ -1,32 +1,17 @@
 import { sign_url } from "alioss-sign-v4-util";
-import { encrypt_file, decrypt_file, decrypt_data } from "simple-data-crypto/builder";
-
-export const file_inmemory_encrypt = async (blob, password) => {
-    const buffer = [];
-    const file_reader = async (start, end) => new Uint8Array(await (blob.slice(start, end).arrayBuffer()));
-    const file_writer = (data) => buffer.push(data);
-    await encrypt_file(file_reader, file_writer, password);
-    return (new Blob(buffer));
-}
-export const file_inmemory_decrypt = async (blob, password) => {
-    const buffer = [];
-    const file_reader = async (start, end) => new Uint8Array(await (blob.slice(start, end).arrayBuffer()));
-    const file_writer = (data) => buffer.push(data);
-    await decrypt_file(file_reader, file_writer, password);
-    return (await new Blob(buffer).text());
-}
+import { decrypt_data, encrypt_blob, decrypt_blob } from "simple-data-crypto/builder";
 
 let this_time_password = null;
 
 const dynamic_decrypt = async (data) => {
     const possible = (await u.get('saved_passwords')) || [];
     for (const i of possible) try {
-        const r = (await file_inmemory_decrypt(data, i));
+        const r = await (await decrypt_blob(data, i)).text();
         this_time_password = i;
         return r;
     } catch {}
     const p = await globalThis.appComponent.requestInputPasswd();
-    const d = (await file_inmemory_decrypt(data, p.value));
+    const d = await (await decrypt_blob(data, p.value)).text();
     if (p.save) {
         possible.push(p.value);
         u.set('saved_passwords', possible);
@@ -133,7 +118,7 @@ globalThis.save_entries_index = async (credits, entry) => {
         entries: latest_index,
     });
     if (this_time_password) {
-        body = (await file_inmemory_encrypt(new Blob([body]), this_time_password));
+        body = (await encrypt_blob(new Blob([body]), this_time_password));
     }
 
     const resp = await fetch(await signit(url, 'PUT', head), {

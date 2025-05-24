@@ -243,6 +243,7 @@ fetch('./assets/version.json').then(v => v.json()).then(json => {
     inset: 0;
     display: flex;
     flex-direction: column;
+    z-index: 5;
 }
 
 nav {
@@ -255,6 +256,9 @@ nav {
     flex: 1;
     text-align: center;
     line-height: 32px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .content {

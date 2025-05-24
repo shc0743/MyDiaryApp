@@ -19,9 +19,8 @@
 <script setup>
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { sign_url } from 'alioss-sign-v4-util';
-import { encrypt_data } from 'simple-data-crypto/builder';
+import { encrypt_blob } from 'simple-data-crypto/builder';
 import { ref, computed } from 'vue'
-import { file_inmemory_encrypt } from '../entries.js';
 
 const emit = defineEmits(['update-title'])
 const props = defineProps({
@@ -59,7 +58,7 @@ async function enc_entries() {
             type: 'x-my-diary-app-entries-list',
             entries: latest_index,
         }, null, 2);
-        const encrypted = await file_inmemory_encrypt(new Blob([str]), pwd);
+        const encrypted = await encrypt_blob(new Blob([str]), pwd);
 
         // 保存
         const head = {
