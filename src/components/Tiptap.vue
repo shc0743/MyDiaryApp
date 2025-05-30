@@ -120,11 +120,8 @@ export default {
             // ctrl + click
             let target = event.target
             if (target.tagName !== 'A') {
-                target = target.parentElement
-                if (target.tagName !== 'A') {
-                    target = target.parentElement
-                    if (target.tagName !== 'A') return;
-                }
+                target = target.closest('a')
+                if (!target) return;
             }
             const href = target.href
             if (href && href.startsWith('http')) {

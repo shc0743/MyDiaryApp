@@ -1,4 +1,5 @@
 import { createApp } from 'vue'
+import 'resizable-widget';
 import './style.css'
 import App from './App.vue'
 import ElementPlus from 'element-plus'
@@ -32,8 +33,6 @@ globalThis.u = {
     },
 }
 
-import { registerResizableWidget } from 'resizable-widget';
-registerResizableWidget();
 
 const app = createApp(App)
 app.use(ElementPlus, {

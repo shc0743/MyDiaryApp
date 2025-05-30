@@ -18,6 +18,7 @@ css.replace(`
     simple-data-crypto-file-preview {
         border: 1px solid rgb(204, 204, 204);
         max-height: 70vh;
+        height: 50vh;
         overflow: auto;
     }
     simple-data-crypto-file-preview.video {
@@ -139,7 +140,7 @@ export class HTMLXMyDiaryAppFileReferenceElement extends HTMLElement {
         }
         if (type.startsWith('image')) {
             this.#preview.classList.add('image');
-            // 需要处理图片的大小/比例问题，我们需要穿透多层shadowDOM；因此，做好准备！
+            // 需要处理图片的大小/比例问题，我们需要穿透多层shadowDOM
             requestAnimationFrame(() => {
                 const img_container = this.#preview.shadowRoot?.querySelector('common-file-preview')?.shadowRoot;
                 if (!img_container) return;
