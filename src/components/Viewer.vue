@@ -42,7 +42,7 @@
 
         <div class="sep-line" style="margin-top: 0.5em;"></div>
 
-        <div class="t-el" v-html="safe_html" @click="filterLinks"></div>
+        <div class="t-el prose prose-sm sm:prose-base lg:prose-lg xl:prose-2xl focus:outline-none" v-html="safe_html" @click="filterLinks"></div>
     </div>
 </template>
 
