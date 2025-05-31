@@ -1,22 +1,26 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
-import LoginForm from '../components/LoginForm.vue'
-import ArticleList from '../components/ArticleList.vue'
-import Viewer from '../components/Viewer.vue'
-import EditorMain from '../components/EditorMain.vue'
-import EncryptionManagement from '../components/EncryptionManagement.vue'
+
 
 const routes = [
     {
+        path: '/:pathMatch(.*)*',
+        component: () => import('../components/NotFound.vue')
+    },
+    {
         path: '/',
-        redirect: '/list/'
+        redirect: '/welcome/'
+    },
+    {
+        path: '/welcome/',
+        component: () => import('../components/Welcome.vue')
     },
     {
         path: '/login/',
-        component: LoginForm
+        component: () => import('../components/LoginForm.vue')
     },
     {
         path: '/list/',
-        component: ArticleList
+        component: () => import('../components/ArticleList.vue')
     },
     {
         path: '/editor/',
@@ -24,17 +28,17 @@ const routes = [
     },
     {
         path: '/editor/new',
-        component: EditorMain,
+        component: () => import('../components/EditorMain.vue'),
         props: { articleId: '' }  // 传递props表示是新建文章
     },
     {
         path: '/editor/:articleId',  // 动态路由
-        component: EditorMain,
+        component: () => import('../components/EditorMain.vue'),
         props: true  // 将路由参数作为props传递
     },
     {
         path: '/article/:articleId',  // 动态路由
-        component: Viewer,
+        component: () => import('../components/Viewer.vue'),
         props: true  // 将路由参数作为props传递
     },
     {

@@ -16,7 +16,7 @@
         <ElDrawer v-model="showAppMenu" :with-header="false" direction="rtl" size="300px">
             <ElMenu default-active="/" mode="vertical" @select="handleAppMenuSelect"
                 style="overflow: auto; height: 100%;">
-                <ElMenuItem index="/">My Diary</ElMenuItem>
+                <ElMenuItem index="#welcome">My Diary</ElMenuItem>
                 <ElMenuItem index="#article">文章列表</ElMenuItem>
                 <ElMenuItem index="#date">日期列表</ElMenuItem>
                 <ElSubMenu index="#撰写文章">
@@ -191,6 +191,9 @@ function handleAppMenuSelect(data) {
     switch (data) {
         case '/':
             sys_info_box.value.open = true;
+            break;
+        case '#welcome':
+            router.push('/welcome/');
             break;
         case '#article':
             router.push('/list/');

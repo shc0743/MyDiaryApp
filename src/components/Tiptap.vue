@@ -40,7 +40,6 @@ import TableHeader from '@tiptap/extension-table-header'
 import TableRow from '@tiptap/extension-table-row'
 import Underline from '@tiptap/extension-underline'
 import TextStyle from '@tiptap/extension-text-style'
-import Paragraph from '@tiptap/extension-paragraph'
 import { Node } from '@tiptap/core'
 import { Color } from '@tiptap/extension-color'
 import { ElMessage } from 'element-plus'
@@ -58,6 +57,7 @@ const CustomFileReferenceWebComponent = Node.create({
                 'data-id': dom.getAttribute('data-id'),
                 'data-type': dom.getAttribute('data-type'),
                 'data-name': dom.getAttribute('data-name'),
+                'data-config': dom.getAttribute('data-config'),
             })
         }]
     },
@@ -66,6 +66,7 @@ const CustomFileReferenceWebComponent = Node.create({
             'data-id': { default: null, },
             'data-type': { default: null, },
             'data-name': { default: null, },
+            'data-config': { default: null, },
         };
     },
 })

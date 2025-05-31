@@ -59,7 +59,10 @@ const safe_html = computed(() => {
     return purifier.sanitize(
         article.value.content, {
             ADD_TAGS: ['x-my-diary-app-file-reference'],
-            ADD_ATTR: ['style', 'src', 'data-id', 'data-type', 'data-name'],
+            ADD_ATTR: ['style', 'src'],
+            ALLOW_ARIA_ATTR: true,
+            ALLOW_DATA_ATTR: true,
+            ALLOW_UNKNOWN_PROTOCOLS: false,
         },
     )
 });
