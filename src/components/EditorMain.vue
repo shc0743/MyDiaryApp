@@ -298,6 +298,7 @@ const load_article = async (id) => {
         article.value = initArticle();
         await setupSecretId();
         artCreationTime.value = new Date();
+        save_time.value = 0;
         return;
     }
     try {
