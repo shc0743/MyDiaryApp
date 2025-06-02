@@ -28,21 +28,21 @@
             <label>
                 <span class="label">作者:</span>
                 <span class="content">
-                    <el-input-tag v-model="filterData.authors" placeholder="输入作者" trigger="Space" /> 
+                    <el-input-tag v-model="filterData.authors" placeholder="输入作者" /> 
                 </span>
             </label>
 
             <label>
                 <span class="label">标签:</span>
                 <span class="content">
-                    <el-input-tag v-model="filterData.tags" placeholder="输入标签" trigger="Space" />
+                    <el-input-tag v-model="filterData.tags" placeholder="输入标签" />
                 </span>
             </label>
 
             <label>
                 <span class="label">分类:</span>
                 <span class="content">
-                    <el-input-tag v-model="filterData.categories" placeholder="输入分类" trigger="Space" />
+                    <el-input-tag v-model="filterData.categories" placeholder="输入分类" />
                 </span>
             </label>
 
@@ -144,7 +144,7 @@ onMounted(async () => {
 })
 
 // 加载文章列表的函数
-import { sign_url } from 'alioss-sign-v4-util';
+import { load_entries_index } from '../entries.js';
 const isLoading = ref(false)
 async function loadArticles() {
     try {
@@ -154,8 +154,9 @@ async function loadArticles() {
         }
         await props.credits.prom;
         isLoading.value = true;
-        const data = await load_entries_index(props.credits, true);
-        articles.value = data;
+        articles.value = await load_entries_index(props.credits);
+        const latest_data = await load_entries_index(props.credits, true);
+        articles.value = latest_data;
     }
     catch (error) {
         ElMessageBox.alert('加载文章列表失败，请稍后重试。' + error, '错误', {

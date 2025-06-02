@@ -43,7 +43,9 @@ import TextStyle from '@tiptap/extension-text-style'
 import { Node } from '@tiptap/core'
 import { Color } from '@tiptap/extension-color'
 import { ElMessage } from 'element-plus'
+import { HTMLXMyDiaryAppFileReferenceElement } from '../secret-elementary.js'
 
+const myFileReferenceAttrs = HTMLXMyDiaryAppFileReferenceElement.observedAttributes;
 const CustomFileReferenceWebComponent = Node.create({
     name: 'x-my-diary-app-file-reference',
     group: 'block',
@@ -53,21 +55,21 @@ const CustomFileReferenceWebComponent = Node.create({
     parseHTML() {
         return [{
             tag: 'x-my-diary-app-file-reference',
-            getAttrs: dom => ({
-                'data-id': dom.getAttribute('data-id'),
-                'data-type': dom.getAttribute('data-type'),
-                'data-name': dom.getAttribute('data-name'),
-                'data-config': dom.getAttribute('data-config'),
-            })
+            getAttrs: dom => {
+                const attrs = {};
+                for (const attr of myFileReferenceAttrs) {
+                    attrs[attr] = dom.getAttribute(attr);
+                }
+                return attrs;
+            },
         }]
     },
     addAttributes() {
-        return {
-            'data-id': { default: null, },
-            'data-type': { default: null, },
-            'data-name': { default: null, },
-            'data-config': { default: null, },
-        };
+        const attrs = {};
+        for (const attr of myFileReferenceAttrs) {
+            attrs[attr] = { default: null, };
+        }
+        return attrs;
     },
 })
 
@@ -124,13 +126,15 @@ export default {
                 target = target.closest('a')
                 if (!target) return;
             }
-            const href = target.href
-            if (href && href.startsWith('http')) {
-                setTimeout(() => {
-                    window.open(href, '_blank').focus();
-                }, 10);
-            } else {
-                ElMessage.error("不支持的链接: " + href);
+            try {
+                const href = new URL(target.href, location.href);
+                if (href.protocol !== 'http:' && href.protocol !== 'https:') throw 1;
+                if (href.origin === location.origin && href.pathname === location.pathname) {
+                    location = href;
+                }
+                else window.open(href, '_blank').focus();
+            } catch {
+                ElMessage.error("不支持的链接: " + target.href);
             }
         },
     },

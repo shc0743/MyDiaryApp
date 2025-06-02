@@ -1,6 +1,6 @@
 <template>
     <div>
-        <h2>加密管理中心</h2>
+        <h2>加密管理中心（Deprecated）</h2>
 
         <fieldset>
             <legend>索引文件</legend>
@@ -21,6 +21,7 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import { sign_url } from 'alioss-sign-v4-util';
 import { encrypt_blob } from 'simple-data-crypto/builder';
 import { ref, computed } from 'vue'
+import { load_entries_index } from '../entries.js';
 
 const emit = defineEmits(['update-title'])
 const props = defineProps({

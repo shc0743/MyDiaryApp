@@ -1,36 +1,36 @@
 const css = new CSSStyleSheet();
 css.replace(`
-    :host {
-        display: flex;
-        flex-direction: column;
-    }
-    a {
-        color: blue;
-        text-decoration: none;
-    }
-    a:hover {
-        text-decoration: underline;
-    }
-    * {
-        box-sizing: border-box;
-        word-break: break-all;
-    }
-    simple-data-crypto-file-preview {
-        border: 1px solid rgb(204, 204, 204);
-        max-height: 70vh;
-        height: 50vh;
-        overflow: auto;
-    }
-    simple-data-crypto-file-preview.video {
-        max-width: 80vw;
-        margin: auto;
-        height: 50vh;
-        overflow: revert;
-    }
-    simple-data-crypto-file-preview.image {
-        display: flex;
-        flex-direction: column;
-    }
+:host {
+    display: flex;
+    flex-direction: column;
+}
+a {
+    color: blue;
+    text-decoration: none;
+}
+a:hover {
+    text-decoration: underline;
+}
+* {
+    box-sizing: border-box;
+    word-break: break-all;
+}
+simple-data-crypto-file-preview {
+    border: 1px solid rgb(204, 204, 204);
+    max-height: 70vh;
+    height: 50vh;
+    overflow: auto;
+}
+simple-data-crypto-file-preview.video {
+    max-width: 80vw;
+    margin: auto;
+    height: 50vh;
+    overflow: revert;
+}
+simple-data-crypto-file-preview.image {
+    display: flex;
+    flex-direction: column;
+}
 `)
 
 const fixImgPreviewCss = new CSSStyleSheet();
@@ -38,6 +38,12 @@ fixImgPreviewCss.replace(`
 img { overflow: hidden }
 img.scale { overflow: revert }
 `);
+
+const fixSelectedNoteCss = new CSSStyleSheet();
+fixSelectedNoteCss.replace(`x-my-diary-app-file-reference.ProseMirror-selectednode {
+    --snode: block;
+}`);
+document.adoptedStyleSheets.push(fixSelectedNoteCss);
 
 import 'simple-data-crypto-file-preview';
 import { Wrappers } from 'simple-data-crypto/builder';
@@ -49,6 +55,14 @@ function getscm() {
 }
 export function setscm(value) {
     scm.value = value;
+}
+const conf = Object.create(null); // Config Manager
+/**
+ * @param {string} key 
+ * @param {any} value 
+ */
+export function setconf(key, value) {
+    conf[key] = value;
 }
 
 export class HTMLXMyDiaryAppFileReferenceElement extends HTMLElement {
@@ -71,7 +85,7 @@ export class HTMLXMyDiaryAppFileReferenceElement extends HTMLElement {
         this.#introduction.append(this.#info);
     }
     static get observedAttributes() {
-        return ['data-id', 'data-type']; // 监听属性变化
+        return ['data-id', 'data-type', 'data-name', 'data-size', 'data-config'];
     }
     attributeChangedCallback(name, oldVal, newVal) {
         if (oldVal !== newVal) {
@@ -85,15 +99,90 @@ export class HTMLXMyDiaryAppFileReferenceElement extends HTMLElement {
         this.#preview.remove(); // 需要手动remove才能确保子组件的清理函数被调用
     }
     #loaded = false;
+    #load_designmode() {
+        const id = this.getAttribute('data-id');
+        const type = this.getAttribute('data-type');
+        const name = this.getAttribute('data-name');
+        const size = this.getAttribute('data-size');
+
+        const app = document.createElement('div');
+        app.id = 'app';
+        app.innerHTML = `
+        <div id=object_name></div>
+        <div id=selected-note>对象已经选中。按下 Delete 可以删除它。</div>
+        <hr>
+        <div id=config>
+            <div id=config_title>对象设置</div>
+            <div class=cfg-item>
+                <input type=checkbox id=autoload>
+                <label for=autoload>自动加载</label>
+            </div>
+        </div>
+        
+        <style>
+        .cfg-item {
+            display: flex;
+            align-items: center;
+        }
+        .cfg-item input[type=checkbox] {
+            margin-right: 0.5em;
+        }
+        .cfg-item + .cfg-item {
+            margin-top: 0.5em;
+        }
+        #selected-note {
+            display: var(--snode, none);
+        }
+        :host {
+            --snode: none;
+        }
+        </style>`;
+        this.#info.replaceWith(app);
+
+        const s = e => (['Enter', ' '].includes(e.key)) && (e.stopPropagation() + e.preventDefault());
+        app.addEventListener('keydown', s);
+        app.addEventListener('keyup', s);
+        app.addEventListener('input', s);
+
+        const object_name = app.querySelector('#object_name');
+        const autoload = app.querySelector('#autoload');
+
+        const config = new Proxy((() => {
+            const config = this.getAttribute('data-config');
+            if (!config) return {};
+            try {
+                return JSON.parse(config);
+            } catch {
+                return {};
+            }
+        })(), {
+            set: (target, p, value, receiver) => {
+                const r = Reflect.set(target, p, value, receiver);
+                if (r) {
+                    this.setAttribute('data-config', JSON.stringify(target));
+                }
+                return r;
+            }
+        });
+
+        object_name.innerText = `对象: ${name} (ID: ${id}${size ? ', 大小: ' + size : ''})`;
+        autoload.checked = !!config.autoload;
+        autoload.addEventListener('change', () => {
+            config.autoload = !!autoload.checked;
+        });
+    }
     #load() {
         if (this.#loaded) return;
         const id = this.getAttribute('data-id');
         const type = this.getAttribute('data-type');
         const name = this.getAttribute('data-name');
+        const size = this.getAttribute('data-size');
         if (!id || !type || !name) return;
 
+        if (conf.design) return this.#load_designmode();
+
         this.#loaded = true;
-        this.#info.innerText = `对象: ${name} (ID: ${id})`;
+        this.#info.innerText = `对象: ${name} (ID: ${id}${size ? ', 大小: '+ size : ''})`;
         const load_btn = document.createElement('a');
         load_btn.href = 'javascript:void(0)';
         load_btn.innerText = '加载';
@@ -109,6 +198,15 @@ export class HTMLXMyDiaryAppFileReferenceElement extends HTMLElement {
             }
         });
         this.#info.after(load_btn);
+
+        const config = (() => {
+            const config = this.getAttribute('data-config');
+            if (!config) return {};
+            try { return JSON.parse(config) } catch { return {} }
+        })();
+        if (config.autoload) {
+            requestAnimationFrame(() => load_btn.click());
+        }
     }
 
     async #fetchData() {
@@ -132,6 +230,9 @@ export class HTMLXMyDiaryAppFileReferenceElement extends HTMLElement {
             if (isNaN(i)) throw '文件大小不是一个有效的数字。';
             return i;
         })();
+        if (file_size > 100 * 1024 * 1024 && (!type.startsWith('video'))) {
+            throw '文件过大，无法预览。';
+        }
         await this.#preview.load(await Wrappers.createReaderForRemoteObject(await signit(target)), key, file_size, type, name);
         this.#shadow.append(this.#preview); // 添加预览元素到DOM
         this.#preview.title = `${name} (${id})`

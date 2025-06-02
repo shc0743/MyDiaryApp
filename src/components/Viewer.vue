@@ -56,7 +56,7 @@ import { User, CollectionTag, Folder, Clock } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import purifier from 'dompurify';
 
-import { setscm } from '../secret-elementary.js';
+import { setconf, setscm } from '../secret-elementary.js';
 
 const safe_html = computed(() => {
     return purifier.sanitize(
@@ -160,8 +160,6 @@ const load_article = async (id) => {
         return;
     }
     try {
-        // const data = await load_entries_index(props.credits);
-        // const article_data = data.find(item => item.id === id);
         article.value = Object.assign(initArticle(), {
             content: '<p>正在加载文章，请稍候...</p>',
             title: "正在加载...",
@@ -245,6 +243,7 @@ const update_title = (() => {
 });
 onMounted(async () => {
     update_title();
+    setconf('design', false);
     await props.credits.prom; // wait for credits to be setup
     if (props.articleId) load_article(props.articleId);
     else {
@@ -285,20 +284,20 @@ const filterLinks = (event) => {
 }
 
 const tryOpenLink = function (event) {
-    // ctrl + click
     let target = event.target
     if (target.tagName !== 'A') {
-        target = target.parentElement
-        if (target.tagName !== 'A') {
-            target = target.parentElement
-            if (target.tagName !== 'A') return;
-        }
+        target = target.closest('a')
+        if (!target) return;
     }
-    const href = target.href
-    if (href && href.startsWith('http')) {
-        window.open(href, '_blank').focus();
-    } else {
-        ElMessage.error("不支持的链接: " + href);
+    try {
+        const href = new URL(target.href, location.href);
+        if (href.protocol !== 'http:' && href.protocol !== 'https:') throw 1;
+        if (href.origin === location.origin && href.pathname === location.pathname) {
+            location = href;
+        }
+        else window.open(href, '_blank').focus();
+    } catch {
+        ElMessage.error("不支持的链接: " + target.href);
     }
 };
 </script>

@@ -21,7 +21,7 @@ const dynamic_decrypt = async (data) => {
 };
 
 
-globalThis.load_entries_index = async (credits, purge = false) => {
+export async function load_entries_index(credits, purge = false) {
     if (!credits.loaded) await credits.prom;
 
     if (!purge && load_entries_index.__cache__) {
@@ -90,7 +90,7 @@ globalThis.load_entries_index = async (credits, purge = false) => {
         }
     }
 }
-globalThis.save_entries_index = async (credits, entry) => {
+export async function save_entries_index(credits, entry) {
     // 自动注入元数据
     entry.modified = String(new Date().getTime());
     // 获取最新索引

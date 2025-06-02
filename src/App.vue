@@ -10,11 +10,15 @@
                 </el-icon></el-button>
         </nav>
         <div class="content">
-            <router-view @update-title="updateTitle" @update-credits="updateCredits" :credits="credits" />
+            <router-view @update-title="updateTitle" @update-credits="updateCredits" :credits="credits" v-slot="{ Component, route }">
+                <transition name="fade">
+                    <component :is="Component" :key="route.path" />
+                </transition>
+            </router-view>
         </div>
 
         <ElDrawer v-model="showAppMenu" :with-header="false" direction="rtl" size="300px">
-            <ElMenu default-active="/" mode="vertical" @select="handleAppMenuSelect"
+            <ElMenu default-active="/" mode="vertical" @select="handleAppMenuSelect" @click="showAppMenu = false"
                 style="overflow: auto; height: 100%;">
                 <ElMenuItem index="#welcome">My Diary</ElMenuItem>
                 <ElMenuItem index="#article">文章列表</ElMenuItem>
@@ -25,8 +29,8 @@
                     <ElMenuItem index="#new">新文章</ElMenuItem>
                     <ElMenuItem index="#save">保存更改</ElMenuItem>
                 </ElSubMenu>
-                <ElMenuItem index="#em">加密管理中心</ElMenuItem>
                 <ElMenuItem index="#secm">Secret 管理</ElMenuItem>
+                <ElMenuItem index="#settings">设置</ElMenuItem>
                 <ElMenuItem index="#u">{{credits.sk ? "已登入" : "登入"}}</ElMenuItem>
                 <ElMenuItem index="#x">关闭菜单</ElMenuItem>
             </ElMenu>
@@ -38,8 +42,10 @@
             <span>系统信息</span>
             <button style="float:right" data-exclude-bindmove="" @click="sys_info_box.close()">x</button>
         </widget-caption>
-        <div style="display: flex; flex-direction: column; height: 100%; overflow: auto; white-space: normal; word-break: break-all;">
-            <div>使用 Vue.JS。<a href="./copyright/" @click.prevent="((loadCopyRightFrame = true), (copyrightBox.open = true))">点击查看版权信息。</a></div>
+        <div
+            style="display: flex; flex-direction: column; height: 100%; overflow: auto; white-space: normal; word-break: break-all;">
+            <div>使用 Vue.JS。<a href="./copyright/"
+                    @click.prevent="((loadCopyRightFrame = true), (copyrightBox.open = true))">点击查看版权信息。</a></div>
             <hr style="box-sizing: border-box; width: 100%;">
             <div>版本: {{appVersion}}</div>
         </div>
@@ -51,7 +57,9 @@
             <span>Copyright & License</span>
             <button style="float:right" data-exclude-bindmove="" @click="$refs.copyrightBox.close()">x</button>
         </widget-caption>
-        <iframe sandbox="allow-forms allow-scripts allow-popups allow-popups-to-escape-sandbox" v-if="loadCopyRightFrame" src="./assets/LICENSE.html" style="width: 100%; height: 100%; overflow: hidden; border: 0; box-sizing: border-box; display: flex; flex-direction: column;"></iframe>
+        <iframe sandbox="allow-forms allow-scripts allow-popups allow-popups-to-escape-sandbox"
+            v-if="loadCopyRightFrame" src="./assets/LICENSE.html"
+            style="width: 100%; height: 100%; overflow: hidden; border: 0; box-sizing: border-box; display: flex; flex-direction: column;"></iframe>
     </resizable-widget>
     <!-- copyrightBox -->
 
@@ -59,12 +67,13 @@
         <form method="dialog" @submit.prevent="doneInputPasswd(true)">
             <div style="font-size: large; margin-bottom: 0.5em;">啊~哦!</div>
             <div style="margin-bottom: 0.5em;">此内容已加密。</div>
-            <div style="margin-bottom: 0.5em; white-space: nowrap; overflow: hidden;">密码:&nbsp;<select v-model="userInputPasswdSelectedOption">
-                <option value="_">自动选择</option>
-                <option v-for="option in userInputPasswdOptionsList" :key="option" :value="option">
-                    {{option}}
-                </option>
-            </select></div>
+            <div style="margin-bottom: 0.5em; white-space: nowrap; overflow: hidden;">密码:&nbsp;<select
+                    v-model="userInputPasswdSelectedOption">
+                    <option value="_">自动选择</option>
+                    <option v-for="option in userInputPasswdOptionsList" :key="option" :value="option">
+                        {{option}}
+                    </option>
+                </select></div>
             <div style="margin-bottom: 0.5em;">输入密码:</div>
             <el-input v-model="userInputPasswd" autofocus type="password" clearable show-password />
             <div style="margin-top: 0.5em; display: flex; justify-content: space-between; align-items: center;">
@@ -73,13 +82,13 @@
                     <el-button @click="doneInputPasswd(false)">取消</el-button>
                     <el-button type="primary" plain @click="doneInputPasswd(true)">解密</el-button>
                 </div>
-            </div>            
+            </div>
         </form>
     </dialog>
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick, h } from 'vue'
+import { ref, onMounted, nextTick, h, Transition } from 'vue'
 import { Expand, Fold } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
 import { ElCheckbox, ElMessageBox } from 'element-plus'
@@ -211,6 +220,9 @@ function handleAppMenuSelect(data) {
         case '#secm':
             router.push('/secret/management');
             break;
+        case '#settings':
+            router.push('/settings/');
+            break;
         case '#u':
             router.push('/login/');
             break;
@@ -269,5 +281,11 @@ nav {
     padding: 10px;
     overflow: auto;
     box-sizing: border-box;
+}
+
+.app-loading-ui-suspense {
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 </style>

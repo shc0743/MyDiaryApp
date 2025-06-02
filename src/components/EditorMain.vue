@@ -33,7 +33,7 @@
                     <CollectionTag />
                 </el-icon>
                 <span>标签:</span>
-                <el-input-tag v-model="article.tags" placeholder="输入标签" trigger="Space" />
+                <el-input-tag v-model="article.tags" placeholder="输入标签" />
             </div>
 
             <div class="info-item">
@@ -41,7 +41,7 @@
                     <Folder />
                 </el-icon>
                 <span>分类:</span>
-                <el-input-tag v-model="article.categories" placeholder="输入分类" trigger="Space" />
+                <el-input-tag v-model="article.categories" placeholder="输入分类" />
             </div>
 
             <div class="info-item">
@@ -64,7 +64,7 @@
                     <el-button style="margin-top: 0.5em;" @click="doInsertSuperLink">Apply</el-button>
                 </div>
              </ElPopover>
-            <el-button @click="ElMessage.error('暂未实现')"><el-icon><Grid /></el-icon>&nbsp;表格</el-button>
+            <el-button v-show="0" @click="ElMessage.error('暂未实现')"><el-icon><Grid /></el-icon>&nbsp;表格</el-button>
             <ElPopover placement="bottom" title="插入对象" width="250" :visible="dlgInsertObjectShow">
                 <template #reference><el-button @click="dlgInsertObjectShow = true"><el-icon><Picture2 /></el-icon>&nbsp;插入对象</el-button></template>
                 <div style="display: flex; flex-direction: column;">
@@ -91,6 +91,14 @@
                 </div>
              </ElPopover>
             <el-button @click="dlgInsertObjectShow = true"><el-icon><Link /></el-icon>&nbsp;添加附件</el-button>
+            <ElPopover placement="bottom" title="设置链接" width="200" trigger="click">
+                <template #reference><el-button @click="getLink2ArticleList"><el-icon><Link /></el-icon>&nbsp;链接到文章</el-button></template>
+                <div style="display: flex; flex-direction: column;">
+                    <ElSelect v-model="link2article_id" @change="link2article_id && doLink2Article()">
+                        <ElOption v-for="i in link2article_list" :key="i.id" :label="i.title" :value="i.id" />
+                    </ElSelect>
+                </div>
+             </ElPopover>
             <el-button v-show="0"><el-icon><DocumentAdd /></el-icon>&nbsp;插入<span style="margin: 0 0.2em;">HTML</span>片段</el-button>
             <el-button @click="settingsDialogOpen = true"><el-icon><Setting /></el-icon>&nbsp;高级设置</el-button>
             <el-button v-show="0"><el-icon><Switch /></el-icon>&nbsp;切换到 HTML 编辑器</el-button>
@@ -289,11 +297,10 @@ const load_article = async (id) => {
     if (id === 'new' || id === '') {
         article.value = initArticle();
         await setupSecretId();
+        artCreationTime.value = new Date();
         return;
     }
     try {
-        // const data = await load_entries_index(props.credits);
-        // const article_data = data.find(item => item.id === id);
         article.value = Object.assign(initArticle(), {
             content: '<p>正在加载文章，请稍候...</p>',
             title: "正在加载...",
@@ -384,6 +391,7 @@ const update_title = (() => {
 });
 onMounted(async () => {
     update_title();
+    setconf('design', true);
     await props.credits.prom; // wait for credits to be setup
     if (props.articleId) load_article(props.articleId);
     else {
@@ -392,7 +400,7 @@ onMounted(async () => {
 })
 
 import { watch } from 'vue'
-import { get_secret_default_id, get_secret_info, get_secret_key, signit } from '../entries'
+import { get_secret_default_id, get_secret_info, get_secret_key, save_entries_index, load_entries_index, signit } from '../entries'
 import { decrypt_blob, decrypt_data, encrypt_blob, encrypt_data, encrypt_file, Wrappers } from 'simple-data-crypto/builder'
 
 // 监听 article.value.title 的变化，变化时调用 update_title 函数
@@ -631,12 +639,31 @@ const showInsertSuperLinkDialog = () => {
     dlgInsertSuperLink.value = true;
 }
 const doInsertSuperLink = () => {
-    if (!dlgInsertSuperLinkUrl.value) {
-        ElMessage.error('请填写链接地址。');
+    if (dlgInsertSuperLinkUrl.value) {
+        editor.value.setLink(dlgInsertSuperLinkUrl.value);
+    } else {
+        editor.value.setLink('');
+    }
+    dlgInsertSuperLink.value = false; // 关闭对话框
+}
+
+// 链接到文章
+const link2article_id = ref('');
+const link2article_list = ref([]);
+const getLink2ArticleList = async () => {
+    link2article_list.value.length = 0;
+    for (const i of (await load_entries_index(props.credits)).sort((a, b) => +b.created - +a.created)) {
+        link2article_list.value.push(i)
+    }
+}
+const doLink2Article = () => {
+    if (!link2article_id.value) {
+        ElMessage.error('请选择一个文章。');
         return;
     }
-    editor.value.setLink(dlgInsertSuperLinkUrl.value);
-    dlgInsertSuperLink.value = false; // 关闭对话框
+    editor.value.setLink(`#/article/${link2article_id.value}`);
+    link2article_id.value = ''; // 重置选择
+    document.body.dispatchEvent(new PointerEvent('click', { bubbles: true })); // 关闭弹出层
 }
 
 // 插入对象
@@ -755,7 +782,7 @@ const guess_type_by_name = function (name = '') {
     }
 }
 import { init_upload, send, post_upload } from '../ossapi/fileupload.js';
-import { setscm } from '../secret-elementary.js'
+import { setconf, setscm } from '../secret-elementary.js'
 const upload_attachment = async function(id, raw_name, type, content) {
     if (!secret_encryption_key.value) {
         if (!await getSecretEncKey()) throw '解密失败。';

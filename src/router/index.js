@@ -1,4 +1,5 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
+import { defineAsyncComponent, Suspense } from 'vue'
 
 
 const routes = [
@@ -53,6 +54,10 @@ const routes = [
         path: '/secret/management.STAGING',
         component: () => import('../components/SecretManagement.vue'),
         props: { staging: true }  // 传递staging为true
+    },
+    {
+        path: '/settings/',
+        component: () => import('../components/Settings.vue')
     },
 ]
 
