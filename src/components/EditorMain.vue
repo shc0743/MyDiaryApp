@@ -4,7 +4,9 @@
         @drop.capture="onDrop"
         @keydown.capture.esc="isDragOver = false"
     >
-        <div v-if="isDragOver" @dragleave.self="isDragOver=isDragOver=false" @click.self="isDragOver=isDragOver=false" class="cover"><div inert style="pointer-events: none;">Drop</div></div>
+        <Teleport to="body">
+            <div v-if="isDragOver" @dragleave.self="isDragOver=isDragOver=false" @click.self="isDragOver=isDragOver=false" class="cover"><div inert style="pointer-events: none;">Drop</div></div>
+        </Teleport>
 
         <div class="article-title bg-auto">
             <input type="text" v-model="article.title" placeholder="我的文章" class="bg-auto">
@@ -160,7 +162,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import Tiptap from './Tiptap.vue'
 import { User, CollectionTag, Folder, DocumentAdd, Clock, Lock, Link, Grid, Picture as Picture2, Setting, Switch } from '@element-plus/icons-vue'
@@ -394,10 +396,15 @@ onMounted(async () => {
     update_title();
     setconf('design', true);
     await props.credits.prom; // wait for credits to be setup
-    if (props.articleId) load_article(props.articleId);
+    if (props.articleId && props.articleId !== article.value.id) load_article(props.articleId);
     else {
         await setupSecretId();
     }
+    globalThis.myEditor = { save_article };
+})
+onUnmounted(() => {
+    setconf('design', false);
+    globalThis.myEditor = null;
 })
 
 import { watch } from 'vue'
@@ -410,8 +417,11 @@ watch(() => article.value.title, () => {
 })
 
 watch(() => props.articleId, async () => {
-    if (!(props.articleId === article.value.id)) 
+    if (!(props.articleId === article.value.id)) try {
         await load_article(props.articleId);
+    } catch (e) {
+        console.error('[editor]', 'Unexpected exception in user callback: ', e);
+    }
 })
 
 watch(() => secretManagementDialogOpen.value, async (value) => {
@@ -1012,7 +1022,7 @@ async function cleanupUnusedAttachments() {
     width: 100%;
     height: 100%;
     box-sizing: border-box;
-    z-index: 99999;
+    z-index: 99999999;
     background: white;
     opacity: 0.5;
     display: grid;

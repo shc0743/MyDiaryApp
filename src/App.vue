@@ -18,7 +18,7 @@
         </div>
 
         <ElDrawer v-model="showAppMenu" :with-header="false" direction="rtl" size="300px">
-            <ElMenu default-active="/" mode="vertical" @select="handleAppMenuSelect" @click="showAppMenu = false"
+            <ElMenu default-active="/" mode="vertical" @select="handleAppMenuSelect"
                 style="overflow: auto; height: 100%;">
                 <ElMenuItem index="#welcome">My Diary</ElMenuItem>
                 <ElMenuItem index="#article">文章列表</ElMenuItem>
@@ -91,7 +91,7 @@
 import { ref, onMounted, nextTick, h, Transition } from 'vue'
 import { Expand, Fold } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
-import { ElCheckbox, ElMessageBox } from 'element-plus'
+import { ElCheckbox, ElMessage, ElMessageBox } from 'element-plus'
 const router = useRouter()
 
 const title = ref('')
@@ -167,10 +167,15 @@ function get_credit() {
     return credits.value
 }
 
+function show_sys_info() {
+    sys_info_box.value.open = true;
+}
+
 const api = {
     requestInputPasswd,
     requestOtpConfirm,
     get_credit,
+    show_sys_info,
 }
 defineExpose(api)
 onMounted(async () => {
@@ -229,10 +234,16 @@ function handleAppMenuSelect(data) {
         case '#x':
             showAppMenu.value = false;
             break;
-
-        default:
+        case '#save': {
+            const editor = globalThis.myEditor;
+            if (!editor) ElMessage.error('没有打开编辑器');
+            else editor.save_article().then(() => ElMessage.success('保存成功'));
+        }
             break;
+
+        default: return;
     }
+    showAppMenu.value = false;
 }
 
 fetch('./assets/version.json').then(v => v.json()).then(json => {

@@ -2,9 +2,12 @@ import { sign_url } from "alioss-sign-v4-util";
 import { decrypt_data, encrypt_blob, decrypt_blob } from "simple-data-crypto/builder";
 
 let this_time_password = null;
+let is_entries_encrypted_ = false;
+export function is_entries_encrypted() { return is_entries_encrypted_; }
 
 const dynamic_decrypt = async (data) => {
     const possible = (await u.get('saved_passwords')) || [];
+    if (!possible.includes(this_time_password)) possible.splice(0, 0, this_time_password); // 优先使用上次输入的密码
     for (const i of possible) try {
         const r = await (await decrypt_blob(data, i)).text();
         this_time_password = i;
@@ -19,6 +22,8 @@ const dynamic_decrypt = async (data) => {
     this_time_password = p.value;
     return d;
 };
+export { dynamic_decrypt };
+export function set_this_time_password(p) { this_time_password = p; }
 
 
 export async function load_entries_index(credits, purge = false) {
@@ -42,8 +47,10 @@ export async function load_entries_index(credits, purge = false) {
             let data = await resp.blob();
             if ((await data.slice(0, 13).text()) === 'MyEncryption/') {
                 data = await dynamic_decrypt(data);
+                is_entries_encrypted_ = true;
             } else {
                 data = await data.text();
+                is_entries_encrypted_ = false;
             }
             // 检查返回的JSON数据是否符合指定格式
             data = JSON.parse(data);

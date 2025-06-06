@@ -1,5 +1,5 @@
 import { createApp } from 'vue'
-import 'resizable-widget';
+import { zIndexManager } from 'resizable-widget';
 import './style.css'
 import App from './App.vue'
 import ElementPlus from 'element-plus'
@@ -32,6 +32,8 @@ globalThis.u = {
         return true;
     },
 }
+
+zIndexManager.config(3001, 3300);
 
 
 const app = createApp(App)

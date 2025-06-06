@@ -1,6 +1,5 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
-import { defineAsyncComponent, Suspense } from 'vue'
-
+const EditorMain = () => import('../components/EditorMain.vue');
 
 const routes = [
     {
@@ -29,12 +28,12 @@ const routes = [
     },
     {
         path: '/editor/new',
-        component: () => import('../components/EditorMain.vue'),
+        component: EditorMain,
         props: { articleId: '' }  // 传递props表示是新建文章
     },
     {
         path: '/editor/:articleId',  // 动态路由
-        component: () => import('../components/EditorMain.vue'),
+        component: EditorMain,
         props: true  // 将路由参数作为props传递
     },
     {

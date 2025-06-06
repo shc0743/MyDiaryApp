@@ -14,14 +14,19 @@
             </el-icon>
             <span style="margin-left: 0.5em; display: inline-block;">正在获取文章列表...</span>
         </div>
+        <div v-if="!isLoading && !isEntriesEncrypted" style="margin: 0.5em 0;">
+            <b style="color: red;">警告:&nbsp;</b>
+            <span>索引文件没有加密。</span>
+            <router-link to="/settings/">前往加密</router-link>
+        </div>
         <div v-if="showFilter" class="filter-area" style="border: 1px solid #ccc; margin-bottom: 0.5em; padding: 10px; border-radius: 5px;">
             <label>
                 <span class="label">日期:</span>
                 <span class="content">
                     <span class="with-right-margin">从</span>
-                    <el-date-picker v-model="filterData.date.from" type="date" placeholder="选择日期" clearable />
+                    <el-date-picker v-model="filterData.date.from" type="datetime" placeholder="选择日期" clearable />
                     <span class="with-right-margin with-left-margin">到</span>
-                    <el-date-picker v-model="filterData.date.to" type="date" placeholder="选择日期" clearable />
+                    <el-date-picker v-model="filterData.date.to" type="datetime" placeholder="选择日期" clearable />
                 </span>
             </label>
 
@@ -59,10 +64,17 @@
 
         <br>
 
+        <div :data-show="computedCheckedArticles.length" class="checked-articles-overlay">
+            <ElCheckbox v-model="checkedAll" />
+            <span style="flex: 1;">已选中 {{ computedCheckedArticles.length }} 文章</span>
+            <el-button size="small" type="danger" plain @click="deleteCheckedArticles()">删除</el-button>
+        </div>
+
         <!--动态渲染的文章列表-->
         <el-card v-for="article in filteredArticles" :key="article.id" style="margin-bottom: 1em;">
             <template #header>
                 <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <ElCheckbox v-model="checkedArticles[article.id]" class="article-checkbox" />
                     <span class="article-title" :title="(article.title && (
                         article.title.length > 300 ? (article.title.substring(0, 300) + '…') : article.title
                     )) || 'Untitled'">{{ article.title || '无标题' }}</span>
@@ -84,7 +96,7 @@
 </template>
 
 <script setup>
-import { ElMessageBox } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { ref, computed } from 'vue'
 import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
@@ -115,7 +127,8 @@ const filterData = ref({
     status: ['released', 'draft']
 })
 
-const articles = ref([]) 
+const articles = ref([])
+const checkedArticles = ref({})
 
 // 声明一个计算属性，用于过滤和排序文章列表
 const filteredArticles = computed(() => {
@@ -137,6 +150,19 @@ const filteredArticles = computed(() => {
         return titleMatch && dateMatch && authorMatch && tagsMatch && categoriesMatch
     }).sort((a, b) => +b.created - +a.created)
 })
+const computedCheckedArticles = computed(() => {
+    return Reflect.ownKeys(checkedArticles.value).filter(key => !!checkedArticles.value[key]);
+})
+const checkedAll = computed({
+    get() {
+        return computedCheckedArticles.value.length === filteredArticles.value.length;
+    },
+    set(val) {
+        filteredArticles.value.forEach(article => {
+            checkedArticles.value[article.id] = val;
+        });
+    }
+})
 
 // 在挂载完成后加载文章列表
 onMounted(async () => {
@@ -144,8 +170,9 @@ onMounted(async () => {
 })
 
 // 加载文章列表的函数
-import { load_entries_index } from '../entries.js';
+import { is_entries_encrypted, load_entries_index } from '../entries.js';
 const isLoading = ref(false)
+const isEntriesEncrypted = ref(false)
 async function loadArticles() {
     try {
         if (props.credits.loaded && (!props.credits.oss_url || !props.credits.ak || !props.credits.sk || !props.credits.bucket || !props.credits.region)) {
@@ -157,6 +184,7 @@ async function loadArticles() {
         articles.value = await load_entries_index(props.credits);
         const latest_data = await load_entries_index(props.credits, true);
         articles.value = latest_data;
+        isEntriesEncrypted.value = is_entries_encrypted();
     }
     catch (error) {
         ElMessageBox.alert('加载文章列表失败，请稍后重试。' + error, '错误', {
@@ -166,6 +194,10 @@ async function loadArticles() {
     } finally {
         isLoading.value = false;
     }
+}
+
+async function deleteCheckedArticles() {
+    return ElMessage.error('功能未实现');
 }
 </script>
 
@@ -197,9 +229,38 @@ async function loadArticles() {
 .article-details > div+div {
     margin-top: 0.5em;
 }
+.article-checkbox {
+    margin-right: 0.5em;
+}
 .article-title {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    flex: 1;
+}
+.checked-articles-overlay {
+    display: flex;
+    align-items: center;
+    position: fixed;
+    top: var(--overlay-top, 0);
+    left: 0; right: 0;
+    background-color: white;
+    padding: 10px;
+    z-index: 10;
+    border-bottom: 1px solid #ccc;
+    box-sizing: border-box;
+    opacity: 1;
+    transition: opacity 0.2s ease;
+
+    --overlay-top: calc(
+        1em + ((8px) * 2) + 2px + ((10px) * 2) - 2px
+    );
+}
+.checked-articles-overlay[data-show="0"] {
+    visibility: hidden;
+    opacity: 0;
+}
+.checked-articles-overlay > span {
+    margin: 0 0.5em;
 }
 </style>
