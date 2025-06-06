@@ -1,11 +1,10 @@
 <template>
     <div class="editor-container" @keydown.ctrl.s.stop.prevent="save_article"
         @dragover="(checkIfDragIsAllowed($event) && (($event.dataTransfer.dropEffect = 'copy'), (isDragOver = true)))"
-        @drop.capture="onDrop"
         @keydown.capture.esc="isDragOver = false"
     >
         <Teleport to="body">
-            <div v-if="isDragOver" @dragleave.self="isDragOver=isDragOver=false" @click.self="isDragOver=isDragOver=false" class="cover"><div inert style="pointer-events: none;">Drop</div></div>
+            <div v-if="isDragOver" @dragleave.self="isDragOver=isDragOver=false" @dragover="(checkIfDragIsAllowed($event))" @click.self="isDragOver=isDragOver=false" @drop.capture="onDrop" class="cover"><div inert style="pointer-events: none;">Drop</div></div>
         </Teleport>
 
         <div class="article-title bg-auto">
