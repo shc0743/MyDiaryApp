@@ -42,12 +42,12 @@
             <span>系统信息</span>
             <button style="float:right" data-exclude-bindmove="" @click="sys_info_box.close()">x</button>
         </widget-caption>
-        <div
-            style="display: flex; flex-direction: column; height: 100%; overflow: auto; white-space: normal; word-break: break-all;">
+        <div style="display: flex; flex-direction: column; height: 100%; overflow: auto; white-space: normal; word-break: break-all;">
             <div>使用 Vue.JS。<a href="./copyright/"
                     @click.prevent="((loadCopyRightFrame = true), (copyrightBox.open = true))">点击查看版权信息。</a></div>
             <hr style="box-sizing: border-box; width: 100%;">
             <div>版本: {{appVersion}}</div>
+            <div>加密版本: {{ enc_version }}</div>
         </div>
     </resizable-widget>
 
@@ -88,10 +88,11 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick, h, Transition } from 'vue'
+import { ref, onMounted, nextTick, h, Transition, computed } from 'vue'
 import { Expand, Fold } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
 import { ElCheckbox, ElMessage, ElMessageBox } from 'element-plus'
+import { VERSION } from 'simple-data-crypto/builder'
 const router = useRouter()
 
 const title = ref('')
@@ -109,6 +110,10 @@ const updateTitle = (newTitle) => {
 const updateCredits = (newCredits) => {
     credits.value = newCredits
 }
+
+const enc_version = computed(() => {
+    return VERSION
+});
 
 let credits
 credits = ref({

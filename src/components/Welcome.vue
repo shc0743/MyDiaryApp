@@ -27,7 +27,7 @@
 <script setup>
 // 这里可以添加组件的逻辑
 import { ElMessage } from 'element-plus'
-import { onMounted, defineEmits, defineProps, ref } from 'vue'
+import { onMounted, defineEmits, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { is_entries_encrypted, load_entries_index } from '../entries'
 import { IsPINSet } from '../pin_user'

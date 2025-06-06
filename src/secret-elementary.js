@@ -233,7 +233,13 @@ export class HTMLXMyDiaryAppFileReferenceElement extends HTMLElement {
         if (file_size > 100 * 1024 * 1024 && (!type.startsWith('video'))) {
             throw '文件过大，无法预览。';
         }
-        await this.#preview.load(await Wrappers.createReaderForRemoteObject(await signit(target)), key, file_size, type, name);
+        await this.#preview.load(async (/** @type {number} */ start, /** @type {number} */ end) => {
+            const resp = await fetch(await signit(target), {
+                headers: { Range: `bytes=${start}-${end - 1}` }
+            });
+            if (!resp.ok) throw new Error(`Network Error: HTTP ${resp.status} : ${resp.statusText}`);
+            return new Uint8Array(await resp.arrayBuffer());
+        }, key, file_size, type, name);
         this.#shadow.append(this.#preview); // 添加预览元素到DOM
         this.#preview.title = `${name} (${id})`
         if (type.startsWith('video')) {

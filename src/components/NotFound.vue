@@ -8,7 +8,7 @@
 
 <script setup>
 // 这里可以添加组件的逻辑
-import { onMounted, defineEmits } from 'vue'
+import { onMounted } from 'vue'
 const emit = defineEmits(['update-title'])
 onMounted(() => {
     emit('update-title', '404')
