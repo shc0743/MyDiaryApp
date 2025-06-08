@@ -132,7 +132,12 @@ export default {
                 if (href.origin === location.origin && href.pathname === location.pathname) {
                     location = href;
                 }
-                else window.open(href, '_blank').focus();
+                else requestAnimationFrame(() => {
+                    const w = window.open(href, '_blank');
+                    requestAnimationFrame(() => {
+                        w.focus();
+                    });
+                });
             } catch {
                 ElMessage.error("不支持的链接: " + target.href);
             }

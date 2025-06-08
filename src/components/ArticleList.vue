@@ -79,8 +79,8 @@
                         article.title.length > 300 ? (article.title.substring(0, 300) + '…') : article.title
                     )) || 'Untitled'">{{ article.title || '无标题' }}</span>
                     <div style="display: flex; align-items: center;">
-                        <el-button @click="router.push(`/editor/${article.id}`)" >编辑</el-button>
-                        <el-button @click="router.push(`/article/${article.id}`)" type="primary" plain>打开</el-button>
+                        <el-button draggable="true" @click="router.push(`/editor/${article.id}`)" @mousedown.middle.prevent="OpenLinkInNewWindow(`#/editor/${article.id}`)" @dragstart="setDragLink($event, `#/editor/${article.id}`)">编辑</el-button>
+                        <el-button draggable="true" @click="router.push(`/article/${article.id}`)" @mousedown.middle.prevent="OpenLinkInNewWindow(`#/article/${article.id}`)" @dragstart="setDragLink($event, `#/article/${article.id}`)" type="primary" plain>打开</el-button>
                     </div>
                 </div>
             </template>
@@ -194,6 +194,17 @@ async function loadArticles() {
     } finally {
         isLoading.value = false;
     }
+}
+
+function setDragLink(event, url) {
+    url = new URL(url, location)
+    event.dataTransfer.setData('text/plain', url);
+    event.dataTransfer.setData('text/uri-list', url);
+}
+function OpenLinkInNewWindow(url) {
+    requestAnimationFrame(() => {
+        window.open(url, '_blank').focus();
+    });
 }
 
 async function deleteCheckedArticles() {
