@@ -505,7 +505,7 @@ const save_article_core = async () => {
                 schema_version: 2,
                 appid: appid,
                 uuid: uuid,
-                metadata: await encrypt_data(JSON.stringify(item), secret_encryption_key.value),
+                metadata: await encrypt_data(JSON.stringify(item), secret_encryption_key.value, undefined, 32768),
                 content: {
                     secret_id: secret_id.value,
                 },
@@ -768,7 +768,7 @@ const upload_attachment = async function(id, raw_name, type, content) {
     }
     const atta_data = {
         id, type,
-        name: await encrypt_data(raw_name, secret_encryption_key.value, undefined, 16384),
+        name: await encrypt_data(raw_name, secret_encryption_key.value, undefined, 32768),
     };
     const url = new URL(`./attachments/${id}`, props.credits.oss_url);
     const uploadId = await init_upload(new URL(url), props.credits.bucket, props.credits.region, props.credits.ak, props.credits.sk, 'application/x-encrypted');
