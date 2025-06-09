@@ -194,6 +194,7 @@ const initArticle = () => ({
     tmpArticleId: '',
 });
 const OLEArticle = ref({});
+const instanceId = ref(0);
 
 const toolbar = ref(null);
 
@@ -259,7 +260,8 @@ const changes_list = ref({
 
 // 加载文章数据
 const load_article = async (id) => {
-    if (patchSaveLoad.value && patchSaveLoad.value === id) {
+    console.log('[editor]', 'instance', instanceId.value, 'is loading article', id, 'where article is ', article.value.id);
+    if (patchSaveLoad.value === id) {
         patchSaveLoad.value = false;
         return;
     }
@@ -368,6 +370,7 @@ const update_title = (() => {
 onMounted(async () => {
     update_title();
     setconf('design', true);
+    instanceId.value = Date.now();
     await props.credits.prom; // wait for credits to be setup
     if (props.articleId && props.articleId !== article.value.id) load_article(props.articleId);
     else {
@@ -378,6 +381,7 @@ onMounted(async () => {
 onUnmounted(() => {
     setconf('design', false);
     globalThis.myEditor = null;
+    console.log('[editor]', 'instance', instanceId.value, 'is unmounted');
 })
 
 // 监听 article.value.title 的变化，变化时调用 update_title 函数
@@ -432,7 +436,7 @@ const save_article_core = async () => {
     });
 
     // 创建文章逻辑
-    if (!props.articleId) try {
+    if (!props.articleId || props.articleId === 'new') try {
         // 创建文章。
         const article_id_allocated = (() => {
             const now = new Date();
@@ -542,7 +546,7 @@ const save_article_core = async () => {
         });
         if (!resp.ok) throw `HTTP Error ${resp.status}: ${resp.statusText}`;
 
-        if (!props.articleId) {
+        if (!props.articleId || props.articleId === 'new') {
             patchSaveLoad.value = article.value.id;
             router.replace(`/editor/${article.value.id}`);
         }

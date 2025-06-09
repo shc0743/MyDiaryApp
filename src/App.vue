@@ -10,11 +10,7 @@
                 </el-icon></el-button>
         </nav>
         <div class="content">
-            <router-view @update-title="updateTitle" @update-credits="updateCredits" :credits="credits" v-slot="{ Component, route }">
-                <transition name="fade">
-                    <component :is="Component" :key="route.path" />
-                </transition>
-            </router-view>
+            <router-view @update-title="updateTitle" @update-credits="updateCredits" :credits="credits"></router-view>
         </div>
 
         <ElDrawer v-model="showAppMenu" :with-header="false" direction="rtl" size="300px">
