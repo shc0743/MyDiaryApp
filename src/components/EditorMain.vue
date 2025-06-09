@@ -279,6 +279,7 @@ const secretManagementDialogOpen = ref(false)
 // 文章相关数据
 const settingsDialogOpen = ref(false)
 const artCreationTime = ref(new Date());
+const patchSaveLoad = ref(false);
 const fontList = ref([]); // 字体列表
 const attachments = ref([]); // 附件列表
 // 文章元数据是否更改
@@ -290,6 +291,10 @@ const changes_list = ref({
 
 // 加载文章数据
 const load_article = async (id) => {
+    if (patchSaveLoad.value && patchSaveLoad.value === id) {
+        patchSaveLoad.value = false;
+        return;
+    }
     OLEArticle.value = {};
     fontList.value.length = 0;
     attachments.value.length = 0;
@@ -568,11 +573,12 @@ const save_article_core = async () => {
         resp = await fetch(await signit(url, 'PUT', head), {
             method: 'PUT',
             headers: head,
-            body: await encrypt_blob(new Blob([article.value.content]), secret_encryption_key.value),
+            body: await encrypt_blob(new Blob([article.value.content]), secret_encryption_key.value, null, undefined, 32768),
         });
         if (!resp.ok) throw `HTTP Error ${resp.status}: ${resp.statusText}`;
 
         if (!props.articleId) {
+            patchSaveLoad.value = article.value.id;
             router.replace(`/editor/${article.value.id}`);
         }
         // ElMessage.success('文章保存成功');

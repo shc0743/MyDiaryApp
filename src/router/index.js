@@ -27,11 +27,6 @@ const routes = [
         redirect: '/editor/new'  // 重定向到新建文章
     },
     {
-        path: '/editor/new',
-        component: EditorMain,
-        props: { articleId: '' }  // 传递props表示是新建文章
-    },
-    {
         path: '/editor/:articleId',  // 动态路由
         component: EditorMain,
         props: true  // 将路由参数作为props传递
