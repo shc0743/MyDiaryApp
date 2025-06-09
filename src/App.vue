@@ -88,7 +88,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick, h, Transition, computed } from 'vue'
+import { ref, onMounted, nextTick, h, computed } from 'vue'
 import { Expand, Fold } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
 import { ElCheckbox, ElMessage, ElMessageBox } from 'element-plus'
@@ -195,10 +195,14 @@ onMounted(async () => {
     queueMicrotask(async () => {
         await new Promise(r => requestAnimationFrame(r));
         try {
-            const data = await u.get('LogonData');
+            const data = await u.getx('LogonData');
             if (!data) throw -1;
             credits.value = (data);
-        } catch { }
+        } catch (e) {
+            if (e !== -1) ElMessageBox.alert('拒绝访问。', '错误', { type: 'error', confirmButtonText: '重新加载' }).finally(() => {
+                globalThis.location.reload();
+            })
+        }
         credits.value.loaded = true;
         credits.prom_resolve();
     })

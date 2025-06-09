@@ -18,15 +18,19 @@ const u = {
         return true;
     },
     async getx(key) {
-        if (!await IsPINSet()) return await u.get(key);
+        const data = await u.get(key);
+        if (!await IsPINSet()) return data;
         if (pin_rejected) throw new Error('Access denied.');
         if (!user_pin) if (!await askPIN()) return undefined;
+        if (!data) return data; // 假值，说明此属性本就不存在
         try {
-            return JSON.parse(await decrypt_data(await u.get(key), user_pin));
+            return JSON.parse(await decrypt_data(data, user_pin));
         } catch { return undefined };
     },
     async setx(key, value) {
         if (!await IsPINSet()) return await u.set(key, value);
+        if (pin_rejected) throw new Error('Access denied.');
+        if (!user_pin) if (!await askPIN()) throw new Error('Cancelled');
         return await u.set(key, await encrypt_data(JSON.stringify(value), user_pin, undefined, 65536));
     },
 };
@@ -34,8 +38,9 @@ const u = {
 export { u };
     
 export const PINProtected = [
-    'saved_passwords',
-    'saved_secret_passwords',
+    'saved_passwords', // 包含密码
+    'saved_secret_passwords', // 包含 secret 密码
+    'LogonData', // 包含OSS的AK/SK
 ];
 
 export async function IsPINSet() {
@@ -46,7 +51,7 @@ export async function SetPIN(pin) {
     if (typeof pin !== 'string') throw new TypeError('pin must be a string');
     if (await IsPINSet()) throw new Error('PIN is already set');
     user_pin = hexlify(get_random_bytes(128));
-    await u.set('pin', await encrypt_data(user_pin, pin));
+    await u.set('pin', await encrypt_data(user_pin, pin)); // 默认的 262144 已经足够安全（scrypt）
     for (const i of PINProtected) {
         await u.setx(i, await u.get(i));
     }
@@ -54,10 +59,17 @@ export async function SetPIN(pin) {
 export async function askPIN() {
     if (user_pin) return true; // 已经验证过了
     try {
-        const { value } = await globalThis.appComponent.requestInputPasswd([], false, '请输入 PIN。');
+        let user = null;
+        try {
+            const { value } = await globalThis.appComponent.requestInputPasswd([], false, '请输入 PIN。');
+            user = value;
+        } catch {
+            pin_rejected = true;
+            return false;
+        }
         const pin = await u.get('pin');
         if (!pin) throw new Error('PIN is not set');
-        user_pin = await decrypt_data(pin, value);
+        user_pin = await decrypt_data(pin, user);
         return true;
     }
     catch { return false; }

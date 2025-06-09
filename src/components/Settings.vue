@@ -111,8 +111,12 @@ onMounted(async () => {
     }).catch(() => {
         isEntriesEncrypted.value = null;
     }).finally(async () => {
-        saved_passwd_list.value = await u.getx('saved_secret_passwords') || {}
-        saved_passwd_text_list.value = await u.getx('saved_passwords') || []
+        try {
+            saved_passwd_list.value = await u.getx('saved_secret_passwords') || {}
+            saved_passwd_text_list.value = await u.getx('saved_passwords') || []
+        } catch (error) {
+            ElMessage.error('拒绝访问。')
+        }
     })
     isPINSet.value = await IsPINSet()
 })

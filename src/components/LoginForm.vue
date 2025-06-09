@@ -18,7 +18,9 @@
                 <el-input placeholder="Please enter valid content" v-model="form_data.region" clearable />
             </el-form-item>
             <el-form-item>
-                <el-checkbox v-model="form_data.save_password">保存密码</el-checkbox>
+                <el-checkbox v-model="form_data.save_password" :style="{ color: isSafe ? 'green' : '' }">
+                    保存密码 {{ isSafe ? '(安全)' : '(设置 PIN 即可安全地保存)' }}
+                </el-checkbox>
             </el-form-item>
             <el-form-item>
                 <el-button type="primary" plain @click="handleSubmit" style="flex: 1;">登入</el-button>
@@ -37,9 +39,9 @@
 
 <script setup>
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { h, ref } from 'vue'
+import { h, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { u } from '../user.js';
+import { IsPINSet, u } from '../user.js';
 
 const emit = defineEmits(['update-title', 'update-credits'])
 emit('update-title', '登入')
@@ -67,19 +69,31 @@ const form_data = ref({
     save_password: props.credits.sk ? true : false
 })
 
-const handleSubmit = () => {
-    // 由于 structuredClone 报错，使用 JSON 序列化和反序列化来实现深拷贝
-    const data = JSON.parse(JSON.stringify(form_data.value));
-    if (!form_data.value.save_password) {
-        data.sk = undefined
+const isSafe = ref(false)
+
+onMounted(async () => {
+    if (await IsPINSet()) {
+        form_data.value.save_password = true // 安全地保存密码
+        isSafe.value = true
     }
-    u.set('LogonData', (data))
-    emit('update-credits', form_data.value) // 传递新的 credits 值给父组件 (..)
-    router.push('/welcome/')
+})
+
+const handleSubmit = async () => {
+    try {
+        const data = JSON.parse(JSON.stringify(form_data.value));
+        if (!form_data.value.save_password) {
+            data.sk = undefined
+        }
+        await u.setx('LogonData', data)
+        emit('update-credits', form_data.value) // 传递新的 credits 值给父组件 (..)
+        router.push('/welcome/')
+    } catch (error) {
+        ElMessageBox.alert('登入失败：' + error, '错误', { type: 'error', confirmButtonText: '好的' });
+    }
 }
 
 function logout() {
-    u.set('LogonData', {}) // 清空登录数据
+    u.setx('LogonData', {}) // 清空登录数据
     ElMessageBox.alert('成功');
     setTimeout(() => { globalThis.location.reload(); }, 200) // 刷新页面 
 }
