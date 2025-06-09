@@ -238,6 +238,7 @@ async function setupSecretId() {
 
 async function getSecretEncKey() {
     secret_encryption_key.value = await ask_secret_key_by_id(secret_id.value);
+    return !!secret_encryption_key.value;
 }
 
 // secret管理相关内容
@@ -303,6 +304,7 @@ const load_article = async (id) => {
         secret_id_buffer.value = secret_id.value;
         // 获取加密密钥
         if (!await getSecretEncKey()) {
+            ElMessage.error('获取加密密钥失败。');
             history.back();
             return;
         }

@@ -41,7 +41,7 @@
             </template>
             <template v-if="isPINSet">
                 <div style="color: green;">PIN 已设置。</div>
-                <ElButton style="margin-top: 0.5em;" plain type="success" @click="changePIN">更改 PIN</ElButton>
+                <ElButton style="margin-top: 0.5em;" @click="changePIN">更改 PIN</ElButton>
                 <ElButton style="margin-top: 0.5em;" plain type="danger" @click="clearPIN">清除 PIN</ElButton>
             </template>
             <template v-else>
