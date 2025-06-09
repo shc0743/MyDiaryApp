@@ -1,23 +1,24 @@
 import { sign_url } from "alioss-sign-v4-util";
 import { decrypt_data, encrypt_blob, decrypt_blob } from "simple-data-crypto/builder";
+import { u } from './user.js';
 
 let this_time_password = null;
 let is_entries_encrypted_ = false;
 export function is_entries_encrypted() { return is_entries_encrypted_; }
 
 const dynamic_decrypt = async (data) => {
-    const possible = (await u.get('saved_passwords')) || [];
+    const possible = (await u.getx('saved_passwords')) || [];
     if (!possible.includes(this_time_password)) possible.splice(0, 0, this_time_password); // 优先使用上次输入的密码
     for (const i of possible) try {
         const r = await (await decrypt_blob(data, i)).text();
         this_time_password = i;
         return r;
     } catch {}
-    const p = await globalThis.appComponent.requestInputPasswd();
+    const p = await globalThis.appComponent.requestInputPasswd(undefined, true, '请输入索引文件的密码。');
     const d = await (await decrypt_blob(data, p.value)).text();
     if (p.save) {
         possible.push(p.value);
-        u.set('saved_passwords', possible);
+        u.setx('saved_passwords', possible);
     }
     this_time_password = p.value;
     return d;
@@ -207,4 +208,44 @@ export async function get_secret_default_id() {
         if (!resp.ok) throw 404;
         return await resp.text();
     } catch { return null; }
+}
+
+/**
+ * @param {string} id secret id
+ */
+export async function ask_secret_key_by_id(id) {
+    const info = await get_secret_info(id);
+    if (!info) {
+        ElMessage.error('没有找到 Secret, 无法解密。');
+        return false; // 终止执行，避免后续错误
+    }
+    // 尝试解密
+    const saved = await u.getx("saved_secret_passwords");
+    const secret_encryption_key = { value: null };
+    secret_encryption_key.value = null;
+    if (saved && saved[id]) try {
+        // 使用指定密码解密
+        secret_encryption_key.value = await get_secret_key(id, saved[id].passphrase, saved[id].name);
+    } catch { }
+    // 继续尝试解密
+    if (!secret_encryption_key.value) try {
+        // 弹出密码输入框
+        const { value, save, option } = await globalThis.appComponent.requestInputPasswd(Reflect.ownKeys(info.primary_key));
+        // 尝试解密
+        const optRef = {};
+        secret_encryption_key.value = await get_secret_key(id, value, option, optRef);
+        if (!secret_encryption_key.value) throw 1;
+        // 如果解密成功，并且用户选择了保存密码，保存密码
+        if (save) {
+            const saved = (await u.getx("saved_secret_passwords")) || {};
+            saved[id] = { name: option || optRef.name, passphrase: value };
+            await u.setx("saved_secret_passwords", saved);
+        }
+        // 不需要try catch，因为如果没有密码，会直接抛出错误
+
+    } catch {
+        ElMessage.error('解密失败。密码不正确。');
+        return false; // 终止执行，避免后续错误
+    }
+    return secret_encryption_key.value;
 }

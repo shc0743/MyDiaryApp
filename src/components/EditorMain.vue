@@ -161,12 +161,15 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import Tiptap from './Tiptap.vue'
 import { User, CollectionTag, Folder, DocumentAdd, Clock, Lock, Link, Grid, Picture as Picture2, Setting, Switch } from '@element-plus/icons-vue'
 import { exportContent } from '../ossapi/filelistapi'
 import { ElDatePicker, ElMessage, ElMessageBox, ElOption, ElPopover } from 'element-plus'
+import { u } from '../user.js';
+import { get_secret_default_id, get_secret_info, save_entries_index, load_entries_index, signit, ask_secret_key_by_id } from '../entries'
+import { decrypt_blob, decrypt_data, encrypt_blob, encrypt_data, encrypt_file, Wrappers } from 'simple-data-crypto/builder'
 
 const router = useRouter()
 const emit = defineEmits(['update-title'])
@@ -234,43 +237,7 @@ async function setupSecretId() {
 }
 
 async function getSecretEncKey() {
-    const info = await get_secret_info(secret_id.value);
-    if (!info) {
-        ElMessage.error('没有找到 Secret, 无法解密。');
-        return; // 终止执行，避免后续错误
-    }
-    // 尝试解密
-    const saved = await u.get("saved_secret_passwords");
-    secret_encryption_key.value = null;
-    if (saved && saved[secret_id.value]) try {
-        // 使用指定密码解密
-        secret_encryption_key.value = await get_secret_key(secret_id.value, saved[secret_id.value].passphrase, saved[secret_id.value].name);
-    } catch { }
-    // 继续尝试解密
-    if (!secret_encryption_key.value) try {
-        // 弹出密码输入框
-        const { value, save, option } = await globalThis.appComponent.requestInputPasswd(Reflect.ownKeys(info.primary_key));
-        // 尝试解密
-        const optRef = {};
-        secret_encryption_key.value = await get_secret_key(secret_id.value, value, option, optRef);
-        if (!secret_encryption_key.value) throw 1;
-        // 如果解密成功，并且用户选择了保存密码，保存密码
-        if (save) {
-            const saved = (await u.get("saved_secret_passwords")) || {};
-            saved[secret_id.value] = { name: option || optRef.name, passphrase: value };
-            await u.set("saved_secret_passwords", saved);
-        }
-        // 不需要try catch，因为如果没有密码，会直接抛出错误
-        // 需要把密码同步到<x-my-diary-app-file-reference>组件
-        setscm({
-            key: secret_encryption_key.value,
-            credits: props.credits,
-        });
-    } catch {
-        ElMessage.error('解密失败。密码不正确。');
-        return; // 终止执行，避免后续错误
-    }
-    return true;
+    secret_encryption_key.value = await ask_secret_key_by_id(secret_id.value);
 }
 
 // secret管理相关内容
@@ -410,10 +377,6 @@ onUnmounted(() => {
     setconf('design', false);
     globalThis.myEditor = null;
 })
-
-import { watch } from 'vue'
-import { get_secret_default_id, get_secret_info, get_secret_key, save_entries_index, load_entries_index, signit } from '../entries'
-import { decrypt_blob, decrypt_data, encrypt_blob, encrypt_data, encrypt_file, Wrappers } from 'simple-data-crypto/builder'
 
 // 监听 article.value.title 的变化，变化时调用 update_title 函数
 watch(() => article.value.title, () => {
@@ -712,7 +675,7 @@ const doInsertObject = function (d) {
             for (const i of dlgInsertObjectObjects.value) {
                 const attachment_id = article.value.id + '_' + crypto.randomUUID();
                 if (dlgInsertObjectType.value === '自动检测对象类型') {
-                    type = guess_type_by_name(i.name)
+                    type = await guess_type_by_name(i.name);
                 }
                 content.innerText = `正在加密并上传 ${++n}/${dlgInsertObjectObjects.value.length} ${i.name}`
                 await upload_attachment(attachment_id, i.name, type, i);
@@ -723,6 +686,8 @@ const doInsertObject = function (d) {
                         'data-id': attachment_id,
                         'data-type': type,
                         'data-name': i.name,
+                        'data-size': i.size,
+                        'data-secret-id': secret_id.value,
                     },
                 }, {
                     type: 'paragraph',
@@ -766,10 +731,6 @@ const handle_paste = (event) => {
     const files = clipboardData.files;
     (async () => {
         for (const i of files) {
-            // // ensure the file is not *polluted* 
-            // const ab = await i.arrayBuffer();
-            // const u8 = new Uint8Array(ab);
-            // const buffer = new Blob([u8], i.type);
             dlgInsertObjectObjects.value.push(i);
         }
         doInsertObject(true);
@@ -777,25 +738,21 @@ const handle_paste = (event) => {
 }
 
 
-const guess_type_by_name = function (name = '') {
+const guess_type_by_name = async function (name = '') {
     if (!name.includes(".")) return 'binary';
-    const ext = name.split(".").pop().toLowerCase();
-    switch (ext) {
-        case 'txt':
-            return 'text/plain';
-        case 'jpg': case 'jpeg': case 'png': case 'gif': case 'bmp': case 'webp':
-            return 'image/' + ext;
-        case 'mp4':
-            return 'video';
-        case 'mp3': case 'wav':
-            return 'audio/' + ext;
-        case 'pdf':
-            return 'application/pdf';
-        case 'docx':
-            return 'docx';
-        default:
-            return 'binary';
+    try {
+        const ext = name.split(".").pop().toLowerCase();
+        let mime_db = await u.get("mime_db");
+        if (!mime_db) {
+            mime_db = await (await fetch("assets/mime_db-lite.json")).json();
+            await u.set("mime_db", mime_db);
+        }
+        for (const k in mime_db) {
+            if (mime_db[k]?.extensions?.includes(ext)) return k;
+        }
+        return 'binary';
     }
+    catch { return 'binary' }
 }
 import { init_upload, send, post_upload } from '../ossapi/fileupload.js';
 import { setconf, setscm } from '../secret-elementary.js'
@@ -805,7 +762,7 @@ const upload_attachment = async function(id, raw_name, type, content) {
     }
     const atta_data = {
         id, type,
-        name: await encrypt_data(raw_name, secret_encryption_key.value, undefined, 65536), // 略微降低N以减少资源占用
+        name: await encrypt_data(raw_name, secret_encryption_key.value, undefined, 16384),
     };
     const url = new URL(`./attachments/${id}`, props.credits.oss_url);
     const uploadId = await init_upload(new URL(url), props.credits.bucket, props.credits.region, props.credits.ak, props.credits.sk, 'application/x-encrypted');
@@ -826,7 +783,7 @@ const upload_attachment = async function(id, raw_name, type, content) {
         if (cached_size > 1048576) {
             await doUpload();
         }
-    }, secret_encryption_key.value, null, null, null, 1048576 * 5);
+    }, secret_encryption_key.value, null, null, 32768, 1048576 * 5);
     if (cached_size > 0) await doUpload(); // 上传剩余的内容
     atta_data.etag = await post_upload(url, props.credits.bucket, props.credits.region, props.credits.ak, props.credits.sk, uploadId, tags);
     attachments.value.push(atta_data);

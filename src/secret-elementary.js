@@ -41,13 +41,12 @@ img.scale { overflow: revert }
 
 const fixSelectedNoteCss = new CSSStyleSheet();
 fixSelectedNoteCss.replace(`x-my-diary-app-file-reference.ProseMirror-selectednode {
-    --snode: block;
+    --snode: green;
 }`);
 document.adoptedStyleSheets.push(fixSelectedNoteCss);
 
 import 'simple-data-crypto-file-preview';
-import { Wrappers } from 'simple-data-crypto/builder';
-import { signit } from './entries';
+import { ask_secret_key_by_id, signit } from './entries';
 
 const scm = Object.create(null); // Security Context Manager
 function getscm() {
@@ -85,7 +84,7 @@ export class HTMLXMyDiaryAppFileReferenceElement extends HTMLElement {
         this.#introduction.append(this.#info);
     }
     static get observedAttributes() {
-        return ['data-id', 'data-type', 'data-name', 'data-size', 'data-config'];
+        return ['data-id', 'data-type', 'data-name', 'data-size', 'data-secret-id', 'data-config'];
     }
     attributeChangedCallback(name, oldVal, newVal) {
         if (oldVal !== newVal) {
@@ -109,9 +108,8 @@ export class HTMLXMyDiaryAppFileReferenceElement extends HTMLElement {
         app.id = 'app';
         app.innerHTML = `
         <div id=object_name></div>
-        <div id=selected-note>对象已经选中。按下 Delete 可以删除它。</div>
-        <hr>
-        <div id=config>
+        <hr hidden>
+        <div id=config hidden>
             <div id=config_title>对象设置</div>
             <div class=cfg-item>
                 <input type=checkbox id=autoload>
@@ -130,11 +128,11 @@ export class HTMLXMyDiaryAppFileReferenceElement extends HTMLElement {
         .cfg-item + .cfg-item {
             margin-top: 0.5em;
         }
-        #selected-note {
-            display: var(--snode, none);
+        #object_name {
+            color: var(--snode, revert);
         }
         :host {
-            --snode: none;
+            --snode: revert;
         }
         </style>`;
         this.#info.replaceWith(app);
@@ -220,6 +218,9 @@ export class HTMLXMyDiaryAppFileReferenceElement extends HTMLElement {
         const { key, credits } = userCredentials;
         if (!key || !credits) throw '未登录';
         const target = new URL(`./attachments/${id}`, credits.oss_url);
+        const user_key = (this.getAttribute('data-secret-id')) ?
+            (await ask_secret_key_by_id(this.getAttribute('data-secret-id'))) :
+            key;
         const file_size = await (async () => {
             const signed = await signit(target, 'HEAD');
             const resp = await fetch(signed, { method: 'HEAD' });
@@ -239,7 +240,7 @@ export class HTMLXMyDiaryAppFileReferenceElement extends HTMLElement {
             });
             if (!resp.ok) throw new Error(`Network Error: HTTP ${resp.status} : ${resp.statusText}`);
             return new Uint8Array(await resp.arrayBuffer());
-        }, key, file_size, type, name);
+        }, user_key, file_size, type, name);
         this.#shadow.append(this.#preview); // 添加预览元素到DOM
         this.#preview.title = `${name} (${id})`
         if (type.startsWith('video')) {

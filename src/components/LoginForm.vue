@@ -39,6 +39,7 @@
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { h, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { u } from '../user.js';
 
 const emit = defineEmits(['update-title', 'update-credits'])
 emit('update-title', '登入')

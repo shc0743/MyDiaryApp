@@ -66,7 +66,7 @@
     <dialog ref="dlgInputPasswd" @close="doneInputPasswd(false)" style="width: 240px;">
         <form method="dialog" @submit.prevent="doneInputPasswd(true)">
             <div style="font-size: large; margin-bottom: 0.5em;">啊~哦!</div>
-            <div style="margin-bottom: 0.5em;">此内容已加密。</div>
+            <div style="margin-bottom: 0.5em;" v-text="userInputPasswdShowStr"></div>
             <div style="margin-bottom: 0.5em; white-space: nowrap; overflow: hidden;">密码:&nbsp;<select
                     v-model="userInputPasswdSelectedOption">
                     <option value="_">自动选择</option>
@@ -93,6 +93,7 @@ import { Expand, Fold } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
 import { ElCheckbox, ElMessage, ElMessageBox } from 'element-plus'
 import { VERSION } from 'simple-data-crypto/builder'
+import { u } from './user.js';
 const router = useRouter()
 
 const title = ref('')
@@ -136,14 +137,16 @@ const userCanSavePasswd = ref(false)
 const userInputPasswdFn = ref({})
 const userInputPasswdOptionsList = ref([])
 const userInputPasswdSelectedOption = ref('_')
+const userInputPasswdShowStr = ref('')
 
 /**
  * requestInputPasswd
  * @param passwordOptionsList Password options list.
  * @param allow_Save Configure if the user can save the password.
+ * @param text Text to display.
  * @returns {Promise<{value: string, save: boolean, option: string}>}
  */
-function requestInputPasswd(passwordOptionsList = [], allow_Save = true) {
+function requestInputPasswd(passwordOptionsList = [], allow_Save = true, text = null) {
     return new Promise((resolve, reject) => {
         dlgInputPasswd.value.showModal()
         userInputPasswdFn.value.resolve = resolve;
@@ -153,6 +156,8 @@ function requestInputPasswd(passwordOptionsList = [], allow_Save = true) {
         userCanSavePasswd.value = !!allow_Save;
         userInputPasswdOptionsList.value = passwordOptionsList;
         userInputPasswdSelectedOption.value = '_';
+        if (text) userInputPasswdShowStr.value = text;
+        else userInputPasswdShowStr.value = '此内容已加密。';
     })
 }
 
@@ -186,6 +191,17 @@ defineExpose(api)
 onMounted(async () => {
     await nextTick()
     globalThis.appComponent = api
+
+    queueMicrotask(async () => {
+        await new Promise(r => requestAnimationFrame(r));
+        try {
+            const data = await u.get('LogonData');
+            if (!data) throw -1;
+            credits.value = (data);
+        } catch { }
+        credits.value.loaded = true;
+        credits.prom_resolve();
+    })
 })
 
 function doneInputPasswd(ok) {
@@ -194,17 +210,6 @@ function doneInputPasswd(ok) {
     userInputPasswdFn.value.resolve?.({ value: userInputPasswd.value, save: userSavePasswd.value, option: userInputPasswdSelectedOption.value });
     dlgInputPasswd.value.close()
 }
-
-queueMicrotask(async () => {
-    await new Promise(r => requestAnimationFrame(r));
-    try {
-        const data = await u.get('LogonData');
-        if (!data) throw -1;
-        credits.value = (data);
-    } catch { }
-    credits.value.loaded = true;
-    credits.prom_resolve();
-})
 
 function handleAppMenuSelect(data) {
     switch (data) {

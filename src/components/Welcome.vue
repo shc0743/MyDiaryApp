@@ -30,7 +30,7 @@ import { ElMessage } from 'element-plus'
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { is_entries_encrypted, load_entries_index } from '../entries'
-import { IsPINSet } from '../pin_user'
+import { IsPINSet } from '../user.js'
 const router = useRouter()
 const props = defineProps({
     credits: {

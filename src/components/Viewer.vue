@@ -55,6 +55,7 @@ import { useRouter } from 'vue-router'
 import { User, CollectionTag, Folder, Clock } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import purifier from 'dompurify';
+import { u } from '../user.js';
 
 import { setconf, setscm } from '../secret-elementary.js';
 
@@ -110,7 +111,7 @@ async function getSecretEncKey() {
         return; // 终止执行，避免后续错误
     }
     // 尝试解密
-    const saved = await u.get("saved_secret_passwords");
+    const saved = await u.getx("saved_secret_passwords");
     secret_encryption_key.value = null;
     if (saved && saved[secret_id.value]) try {
         // 使用指定密码解密
@@ -126,9 +127,9 @@ async function getSecretEncKey() {
         if (!secret_encryption_key.value) throw 1;
         // 如果解密成功，并且用户选择了保存密码，保存密码
         if (save) {
-            const saved = (await u.get("saved_secret_passwords")) || {};
+            const saved = (await u.getx("saved_secret_passwords")) || {};
             saved[secret_id.value] = { name: option || optRef.name, passphrase: value };
-            await u.set("saved_secret_passwords", saved);
+            await u.setx("saved_secret_passwords", saved);
         }
         // 不需要try catch，因为如果没有密码，会直接抛出错误
     } catch {

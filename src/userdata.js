@@ -71,7 +71,6 @@ await new Promise(function (resolve, reject) {
 
 
 export { db };
-globalThis.userdata = db;
 
 
 

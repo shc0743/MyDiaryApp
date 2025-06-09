@@ -37,6 +37,21 @@
 
         <ElCard class="card">
             <template #header>
+                <span>PIN 设置</span>
+            </template>
+            <template v-if="isPINSet">
+                <div style="color: green;">PIN 已设置。</div>
+                <ElButton style="margin-top: 0.5em;" plain type="success" @click="changePIN">更改 PIN</ElButton>
+                <ElButton style="margin-top: 0.5em;" plain type="danger" @click="clearPIN">清除 PIN</ElButton>
+            </template>
+            <template v-else>
+                <div style="color: red;">PIN 未设置。</div>
+                <ElButton style="margin-top: 0.5em;" @click="mySetPIN" type="primary" plain>设置 PIN</ElButton>
+            </template>
+        </ElCard>
+
+        <ElCard class="card">
+            <template #header>
                 <span>保存的密码</span>
             </template>
             <div style="display: flex; align-items: center;">
@@ -74,6 +89,8 @@ import { ElCard, ElButton, ElMessageBox, ElMessage } from 'element-plus'
 import { dynamic_decrypt, is_entries_encrypted, load_entries_index, set_this_time_password, signit } from '../entries'
 import { encrypt_blob } from 'simple-data-crypto/builder'
 import { generateQuestion } from '../relation'
+import { u, IsPINSet, SetPIN, ChangePIN, ClearPIN } from '../user.js';
+
 const emit = defineEmits(['update-title'])
 const props = defineProps({
     credits: {
@@ -94,10 +111,13 @@ onMounted(async () => {
     }).catch(() => {
         isEntriesEncrypted.value = null;
     }).finally(async () => {
-        saved_passwd_list.value = await u.get('saved_secret_passwords') || {}
-        saved_passwd_text_list.value = await u.get('saved_passwords') || []
+        saved_passwd_list.value = await u.getx('saved_secret_passwords') || {}
+        saved_passwd_text_list.value = await u.getx('saved_passwords') || []
     })
+    isPINSet.value = await IsPINSet()
 })
+
+const isPINSet = ref(undefined)
 
 const persist_status = ref('正在加载...')
 async function doPersist() {
@@ -240,16 +260,16 @@ async function clearSavedPasswd(k) {
     }
     catch { return }
     if (k === true) {
-        await u.set('saved_secret_passwords', {})
+        await u.setx('saved_secret_passwords', {})
         saved_passwd_list.value = {}
-        await u.set('saved_passwords', [])
+        await u.setx('saved_passwords', [])
         saved_passwd_text_list.value = []
         ElMessage.success('已清除所有保存的密码。')
         return
     }
-    const original = await u.get('saved_secret_passwords')
+    const original = await u.getx('saved_secret_passwords')
     Reflect.deleteProperty(original, k)
-    await u.set('saved_secret_passwords', original)
+    await u.setx('saved_secret_passwords', original)
     saved_passwd_list.value = original
     ElMessage.success('已清除 ' + k + ' 。');
 }
@@ -265,13 +285,82 @@ async function clearSavedPasswdLegacy(k) {
     /**
      * @type {Array<string>}
      */
-    const original = await u.get('saved_passwords')
+    const original = await u.getx('saved_passwords')
     const index = original.indexOf(k)
     if (index === -1) return
     original.splice(index, 1)
-    await u.set('saved_passwords', original)
+    await u.setx('saved_passwords', original)
     saved_passwd_text_list.value = original
     ElMessage.success('已清除。');
+}
+
+async function changePIN() {
+    let pwd;
+    try {
+        pwd = (await ElMessageBox.prompt('请设置新的 PIN。', '设置 PIN', {
+            type: 'info', confirmButtonText: '立即设置', cancelButtonText: '不要设置'
+        })).value; if (!pwd) return;
+    } catch { return };
+    try {
+        await ChangePIN(pwd);
+        ElMessageBox.alert('设置成功。', '成功', {
+            confirmButtonText: '确定',
+            type:'success',
+        }).then(() => { }).catch(() => { }).finally(() => {
+            window.location.reload();
+        })
+    }
+    catch (error) {
+        ElMessageBox.alert('设置失败！原因：' + error, '错误', {
+            confirmButtonText: '确定',
+            type: 'error',
+        }).then(() => { }).catch(() => { })
+    }
+}
+async function clearPIN() {
+    try {
+        await ElMessageBox.confirm('请确认此操作。', '清除 PIN', {
+            confirmButtonText: '确认',
+            cancelButtonText: '取消',
+            type: 'error',
+        });
+    } catch { return }
+    try {
+        await ClearPIN();
+        ElMessageBox.alert('清除成功。', '成功', {
+            confirmButtonText: '确定',
+            type:'success',
+        }).then(() => { }).catch(() => { }).finally(() => {
+            window.location.reload();
+        })
+    } catch (error) {
+        ElMessageBox.alert('清除失败！原因：' + error, '错误', {
+            confirmButtonText: '确定',
+            type: 'error',
+        }).then(() => { }).catch(() => { })
+    }
+}
+async function mySetPIN() {
+    let pwd;
+    try {
+        pwd = (await ElMessageBox.prompt('请设置 PIN。', '设置 PIN', {
+            type: 'info', confirmButtonText: '立即设置', cancelButtonText: '不要设置'
+        })).value; if (!pwd) return;
+    } catch { return };
+    try {
+        await SetPIN(pwd);
+        ElMessageBox.alert('设置成功。', '成功', {
+            confirmButtonText: '确定',
+            type:'success',
+        }).then(() => { }).catch(() => { }).finally(() => {
+            window.location.reload();
+        })
+    } catch (error) {
+        ElMessageBox.alert('设置失败！原因：' + error, '错误', {
+            confirmButtonText: '确定',
+            type: 'error',
+        }).then(() => { }).catch(() => { })
+    }
 }
 </script>
 
