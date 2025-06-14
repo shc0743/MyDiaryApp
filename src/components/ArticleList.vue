@@ -67,7 +67,8 @@
         <div :data-show="computedCheckedArticles.length" class="checked-articles-overlay">
             <ElCheckbox v-model="checkedAll" />
             <span style="flex: 1;">已选中 {{ computedCheckedArticles.length }} 文章</span>
-            <el-button size="small" type="danger" plain @click="deleteCheckedArticles()">删除</el-button>
+            <el-button size="small" type="danger" plain @click="deleteCheckedArticles(0)">消除</el-button>
+            <el-button size="small" type="danger" plain @click="deleteCheckedArticles(1)">删除</el-button>
         </div>
 
         <!--动态渲染的文章列表-->
@@ -235,7 +236,9 @@ function OpenLinkInNewWindow(url) {
     });
 }
 
-async function deleteCheckedArticles() {
+async function deleteCheckedArticles(type) {
+    // type 0 - 消除
+    // type 1 - 删除
     return ElMessage.error('功能未实现');
 }
 </script>
