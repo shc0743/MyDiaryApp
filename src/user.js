@@ -101,3 +101,12 @@ export async function ChangePIN(new_pin) {
 export function IsPINRejected() {
     return pin_rejected;
 }
+export function IsPINVerified() {
+    return !!user_pin;
+}
+export async function ForgetPIN() {
+    // 删除受PIN保护的数据以及PIN本身
+    await u.delete('pin');
+    await u.delete(PINProtected);
+    user_pin = null;
+}

@@ -41,8 +41,9 @@
             </template>
             <template v-if="isPINSet">
                 <div style="color: green;">PIN 已设置。</div>
-                <ElButton style="margin-top: 0.5em;" @click="changePIN">更改 PIN</ElButton>
-                <ElButton style="margin-top: 0.5em;" plain type="danger" @click="clearPIN">清除 PIN</ElButton>
+                <ElButton style="margin-top: 0.5em;" plain type="success" @click="changePIN">更改 PIN</ElButton>
+                <ElButton style="margin-top: 0.5em;" plain type="warning" @click="clearPIN">清除 PIN</ElButton>
+                <ElButton style="margin-top: 0.5em;" plain type="danger" @click="forgetPIN">忘记 PIN</ElButton>
             </template>
             <template v-else>
                 <div style="color: red;">PIN 未设置。</div>
@@ -84,12 +85,12 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { h, onMounted, ref } from 'vue'
 import { ElCard, ElButton, ElMessageBox, ElMessage } from 'element-plus'
 import { dynamic_decrypt, is_entries_encrypted, load_entries_index, set_this_time_password, signit } from '../entries'
-import { encrypt_blob } from 'simple-data-crypto/builder'
+import { encrypt_blob, get_random_uint8_number } from 'simple-data-crypto/builder'
 import { generateQuestion } from '../relation'
-import { u, IsPINSet, SetPIN, ChangePIN, ClearPIN } from '../user.js';
+import { u, IsPINSet, SetPIN, ChangePIN, ClearPIN, ForgetPIN, IsPINVerified } from '../user.js';
 
 const emit = defineEmits(['update-title'])
 const props = defineProps({
@@ -361,6 +362,69 @@ async function mySetPIN() {
         })
     } catch (error) {
         ElMessageBox.alert('设置失败！原因：' + error, '错误', {
+            confirmButtonText: '确定',
+            type: 'error',
+        }).then(() => { }).catch(() => { })
+    }
+}
+async function forgetPIN() {
+    if (IsPINVerified()) {
+        return ElMessage.error('错误: 您已经通过了 PIN 验证。请使用“清除 PIN”功能以在保留数据的前提下清除 PIN。')
+    }
+    try {
+        const confirmation = '我确实忘记了我的PIN-' + get_random_uint8_number();
+        const { value } = await ElMessageBox.prompt(h('div', null, [
+            h('p', null, [
+                h('span', null, '您必须确认：'),
+                h('b', null, '我们无法协助您恢复 PIN！'),
+                h('span', null, '如果忘记了 PIN，您只能'),
+                h('b', null, '彻底清除相关数据'),
+                h('span', null, '，然后'),
+                h('b', null, '重新初始化应用程序'),
+                h('span', null, '。'),
+            ]),
+            h('p', null, [
+                h('span', null, '如果您仍然记得 Secret 密码和您的 OSS 凭据，您可以'),
+                h('b', null, '重新设置应用程序'),
+                h('span', null, '以恢复您的数据。否则，您的数据将'),
+                h('b', null, '无法恢复'),
+                h('span', null, '。'),
+            ]),
+            h('p', null, [
+                h('span', null, '即使继续操作，您也无法得到您原来的 PIN 或解密您的数据，除非您仍然'),
+                h('b', null, '记得 Secret 密码和您的 OSS 凭据'),
+                h('span', null, '。也就是说，'),
+                h('b', { style: { color: 'red' } }, '此功能不仅不是恢复数据的手段，而且还是销毁数据的手段'),
+                h('span', null, '。如果您确实想要继续，请在下面输入“'),
+                h('i', { style: { userSelect: 'all' } }, confirmation),
+                h('span', null, '”以继续。'),
+            ]),
+            h('p', { style: { fontWeight: 'bold', color: 'red' } }, ['确定要完全清除所有受 PIN 保护的数据，以重新设置应用程序吗？']),
+        ]), '忘记 PIN', {
+            confirmButtonText: '确认',
+            cancelButtonText: '取消',
+            type: 'error',
+            inputValue: '',
+            inputErrorMessage: '请认真阅读上面的内容再继续。',
+            inputPlaceholder: '请输入内容。',
+            inputValidator: (v) => v === confirmation,
+        });
+        if (value !== confirmation) {
+            ElMessage.error('输入内容错误！');
+            return;
+        }
+    } catch { return }
+    try {
+        await ForgetPIN();
+        ElMessageBox.alert('必须重新加载页面。', '成功', {
+            confirmButtonText: '确定',
+            type: 'error',
+        }).then(() => { }).catch(() => { });
+        setTimeout(() => {
+            window.location.reload();
+        }, 1000);
+    } catch (error) {
+        ElMessageBox.alert('清除失败！原因：' + error, '错误', {
             confirmButtonText: '确定',
             type: 'error',
         }).then(() => { }).catch(() => { })
