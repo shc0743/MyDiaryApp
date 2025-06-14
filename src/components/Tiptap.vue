@@ -67,9 +67,26 @@ const CustomFileReferenceWebComponent = Node.create({
     addAttributes() {
         const attrs = {};
         for (const attr of myFileReferenceAttrs) {
-            attrs[attr] = { default: null, };
+            attrs[attr] = {
+                default: null,
+                parseHTML: dom => dom.getAttribute(attr),
+                renderHTML: attributes => attributes[attr]
+                    ? { [attr]: attributes[attr] }
+                    : {}
+            };
         }
         return attrs;
+    },
+    addCommands() {
+        return {
+            setFileReferenceOptions: (options) => ({ chain }) => {
+                return chain()
+                    .updateAttributes('x-my-diary-app-file-reference', {
+                        'data-config': JSON.stringify(options)
+                    })
+                    .run();
+            },
+        }
     },
 })
 

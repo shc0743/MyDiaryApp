@@ -2,6 +2,7 @@ import { sign_url } from "alioss-sign-v4-util";
 import { decrypt_data, encrypt_blob, decrypt_blob } from "simple-data-crypto/builder";
 import { u } from './user.js';
 import { app_event } from './eventing.js';
+import { ElMessage } from "element-plus";
 
 let this_time_password = null;
 let is_entries_encrypted_ = false;

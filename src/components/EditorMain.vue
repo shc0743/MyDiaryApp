@@ -96,7 +96,7 @@
                 <template #reference><el-button @click="getLink2ArticleList"><el-icon><Link /></el-icon>&nbsp;链接到文章</el-button></template>
                 <div style="display: flex; flex-direction: column;">
                     <ElSelect v-model="link2article_id" @change="link2article_id && doLink2Article()">
-                        <ElOption v-for="i in link2article_list" :key="i.id" :label="i.title" :value="i.id" />
+                        <ElOption v-for="i in link2article_list" :key="i.id" :label="(i.title.length > 100) ? (i.title.substring(0, 100) + '...') : i.title" :value="i.id || 'undefined'" />
                     </ElSelect>
                 </div>
              </ElPopover>
@@ -124,9 +124,9 @@
                 <div v-for="(i) in attachments" :key="i.id" class="attachment-item">
                     <div style="color: gray">{{ attname_normalize(i.id) }}</div>
                     <div class="actions">
-                        <a href="javascript:" @click="show_filename(i.name)">获取文件名</a>
+                        <a href="javascript:" @click="show_filename(i.name, i.secret_id)">获取文件名</a>
                         <span>&nbsp;&nbsp;</span>
-                        <a href="javascript:" @click="delete_attachment(i.id, i.name)">删除附件</a>
+                        <a href="javascript:" @click="delete_attachment(i.id, i.name, i.secret_id)">删除附件</a>
                     </div>
                 </div>
             </div>
@@ -153,8 +153,6 @@
                 <div v-if="secret_id_Edit?.secret_name"><a href="javascript:" @click="updateSecretEncryption">{{ 
                     article.id ? "更新 Secret" : "使用此 Secret 创建文章"
                 }}</a></div>
-
-                <div style="margin-top: 0.5em; color: red;">警告：不允许使用此功能，因为目前还没有完成附件的重加密。强行继续将导致所有附件无法访问。</div>
             </ElCard>
         </el-dialog>
     </div>
@@ -376,7 +374,7 @@ onMounted(async () => {
     else {
         await setupSecretId();
     }
-    globalThis.myEditor = { save_article };
+    globalThis.myEditor = { save_article, editor };
 })
 onUnmounted(() => {
     setconf('design', false);
@@ -581,7 +579,7 @@ async function updateSecretEncryption() {
     }
     // 检查是否是新建文章（没有ID）
     if (!!article.value.id) 
-    try { await ElMessageBox.confirm('更新 Secret 将需要重新加密文章内容以及所有附件。是否继续？', '更新 Secret', {
+    try { await ElMessageBox.confirm('更新 Secret 将需要重新加密文章内容。附件不会自动重新加密。是否继续？', '更新 Secret', {
         confirmButtonText: '继续',
         cancelButtonText: '取消',
         type: 'warning',
@@ -769,6 +767,7 @@ const upload_attachment = async function(id, raw_name, type, content) {
     const atta_data = {
         id, type,
         name: await encrypt_data(raw_name, secret_encryption_key.value, undefined, 32768),
+        secret_id: secret_id.value,
     };
     const url = new URL(`./attachments/${id}`, props.credits.oss_url);
     const uploadId = await init_upload(new URL(url), props.credits.bucket, props.credits.region, props.credits.ak, props.credits.sk, 'application/x-encrypted');
@@ -801,12 +800,27 @@ const attachmentsListDialogOpen = ref(false)
 function attname_normalize(name) {
     return name.split("_").pop();
 }
-function show_filename(filename) {
-    decrypt_data(filename, secret_encryption_key.value).then((n) => ElMessage.success("文件名: " + n)).catch(ElMessage.error)
-}
-async function delete_attachment(id, name) {
+async function get_filename(filename, secret_id = null) {
     try {
-        name = await decrypt_data(name, secret_encryption_key.value);
+        return await decrypt_data(filename, secret_id ? await ask_secret_key_by_id(secret_id) : secret_encryption_key.value)
+    }
+    catch (e) {
+        return null;
+    }
+}
+async function show_filename(filename, secret_id = null) {
+    try {
+        const name = await get_filename(filename, secret_id);
+        if (!name) throw '文件名解密失败。';
+        ElMessage.success("文件名: " + name);
+    }
+    catch (e) {
+        ElMessage.error(e);
+    }
+}
+async function delete_attachment(id, name, secret_id = null) {
+    try {
+        name = await decrypt_data(name, secret_encryption_key.value, secret_id);
         await ElMessageBox.confirm('是否确实要删除附件 ' + name + ' ?', '删除附件', {
             confirmButtonText: '确实',
             cancelButtonText: '不行',
@@ -857,7 +871,7 @@ async function cleanupUnusedAttachments() {
             changes_list.value.attachmentsList = true;
         }
     }
-    ElMessageBox.confirm(`发现 ${unused.length} 个未使用的附件，包括 ${await decrypt_data(unused[0].name, secret_encryption_key.value)} 等，是否要删除它们？`, '清理未使用的附件', {
+    ElMessageBox.confirm(`发现 ${unused.length} 个未使用的附件，包括 ${(await get_filename(unused[0].name, unused[0].secret_id)) || unused[0].id} 等，是否要删除它们？`, '清理未使用的附件', {
         confirmButtonText: '删除',
         cancelButtonText: '取消',
         type: 'warning',

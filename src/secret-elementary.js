@@ -87,9 +87,7 @@ export class HTMLXMyDiaryAppFileReferenceElement extends HTMLElement {
         return ['data-id', 'data-type', 'data-name', 'data-size', 'data-secret-id', 'data-config'];
     }
     attributeChangedCallback(name, oldVal, newVal) {
-        if (oldVal !== newVal) {
-            this.#load();
-        }
+        
     }
     connectedCallback() {
         this.#load();
@@ -108,8 +106,14 @@ export class HTMLXMyDiaryAppFileReferenceElement extends HTMLElement {
         app.id = 'app';
         app.innerHTML = `
         <div id=object_name></div>
-        <hr hidden>
-        <div id=config hidden>
+        <hr>
+        <div>
+            <span>对象使用 ID 为</span>
+            <code id=secret_id></code>
+            <span>的 Secret 加密。</span>
+        </div>
+        <hr>
+        <div id=config>
             <div id=config_title>对象设置</div>
             <div class=cfg-item>
                 <input type=checkbox id=autoload>
@@ -134,6 +138,14 @@ export class HTMLXMyDiaryAppFileReferenceElement extends HTMLElement {
         :host {
             --snode: revert;
         }
+        code {
+            background-color: #f0f0f0;
+            border-radius: 5px;
+            padding: 5px;
+            margin: 5px 0;
+            display: inline-block;
+            user-select: all;
+        }
         </style>`;
         this.#info.replaceWith(app);
 
@@ -143,6 +155,7 @@ export class HTMLXMyDiaryAppFileReferenceElement extends HTMLElement {
         app.addEventListener('input', s);
 
         const object_name = app.querySelector('#object_name');
+        const secret_id = app.querySelector('#secret_id');
         const autoload = app.querySelector('#autoload');
 
         const config = new Proxy((() => {
@@ -157,7 +170,7 @@ export class HTMLXMyDiaryAppFileReferenceElement extends HTMLElement {
             set: (target, p, value, receiver) => {
                 const r = Reflect.set(target, p, value, receiver);
                 if (r) {
-                    this.setAttribute('data-config', JSON.stringify(target));
+                    globalThis.myEditor?.editor?.value?.editor?.chain().setFileReferenceOptions(target).run();
                 }
                 return r;
             }
@@ -168,6 +181,7 @@ export class HTMLXMyDiaryAppFileReferenceElement extends HTMLElement {
         autoload.addEventListener('change', () => {
             config.autoload = !!autoload.checked;
         });
+        secret_id.innerText = this.getAttribute('data-secret-id');
     }
     #load() {
         if (this.#loaded) return;
@@ -235,6 +249,7 @@ export class HTMLXMyDiaryAppFileReferenceElement extends HTMLElement {
             throw '文件过大，无法预览。';
         }
         if (type === 'video') type = 'video/mp4';
+        // if (typeof user_key !== 'string') throw '密钥异常';
         await this.#preview.load(async (/** @type {number} */ start, /** @type {number} */ end) => {
             const resp = await fetch(await signit(target), {
                 headers: { Range: `bytes=${start}-${end - 1}` }
