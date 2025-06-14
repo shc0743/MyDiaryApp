@@ -1,5 +1,4 @@
 (function () {
-  const currentScript = document.currentScript
   const h = location.pathname
   const p = location.origin + h
   fetch('./index.webmanifest')

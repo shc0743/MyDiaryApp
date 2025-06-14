@@ -90,6 +90,7 @@ import { useRouter } from 'vue-router'
 import { ElCheckbox, ElMessage, ElMessageBox } from 'element-plus'
 import { VERSION } from 'simple-data-crypto/builder'
 import { u } from './user.js';
+import { app_event } from './eventing.js'
 const router = useRouter()
 
 const title = ref('')
@@ -201,6 +202,7 @@ onMounted(async () => {
         }
         credits.value.loaded = true;
         credits.prom_resolve();
+        app_event.dispatch('credits_updated');
     })
 })
 

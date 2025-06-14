@@ -1,5 +1,5 @@
 <template>
-    <div class="app">
+    <div class="app" ref="root">
         <h2 style="margin-top: 0;">
             <span>文章列表</span>
             <a href="javascript:" @click.prevent="loadArticles()" style="margin-left: 1em; font-size: x-small; font-weight: normal;">加载</a>
@@ -97,7 +97,7 @@
 
 <script setup>
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick, onBeforeUnmount } from 'vue'
 import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { RefreshRight } from '@element-plus/icons-vue'
@@ -115,6 +115,7 @@ const router = useRouter()
 
 const searchKeyword = ref('')
 const showFilter = ref(false)
+const root = ref(null)
 
 const filterData = ref({
     date: {
@@ -164,16 +165,35 @@ const checkedAll = computed({
     }
 })
 
+// 保存滚动位置，优化用户体验
+const restoreScroll = async () => {
+    await new Promise(nextTick);
+    const scrolltop = +globalThis.sessionStorage.getItem('MyDiaryApp::ArticleList::scrolltop');
+    if (isNaN(scrolltop)) {
+        return;
+    }
+    root.value.parentElement.scrollTop = scrolltop;
+}
+const saveScrollPosition = async () => {
+    globalThis.sessionStorage.setItem('MyDiaryApp::ArticleList::scrolltop', root.value.parentElement.scrollTop);
+}
+
 // 在挂载完成后加载文章列表
 onMounted(async () => {
-    await loadArticles()
+    if (false === await loadArticles(false)) return;
+    await restoreScroll();
+    root.value.parentElement.addEventListener('scroll', saveScrollPosition, { passive: true });
+    await loadArticles(true);
+})
+onBeforeUnmount(() => {
+    root.value.parentElement.removeEventListener('scroll', saveScrollPosition, { passive: true });
 })
 
 // 加载文章列表的函数
 import { is_entries_encrypted, load_entries_index } from '../entries.js';
 const isLoading = ref(false)
 const isEntriesEncrypted = ref(false)
-async function loadArticles() {
+async function loadArticles(loadLatest = true) {
     try {
         if (props.credits.loaded && (!props.credits.oss_url || !props.credits.ak || !props.credits.sk || !props.credits.bucket || !props.credits.region)) {
             router.push('/login/')
@@ -181,16 +201,24 @@ async function loadArticles() {
         }
         await props.credits.prom;
         isLoading.value = true;
-        articles.value = await load_entries_index(props.credits);
-        const latest_data = await load_entries_index(props.credits, true);
-        articles.value = latest_data;
+        if (load_entries_index.__cache__) {
+            if (loadLatest) {
+                const latest_data = await load_entries_index(props.credits, true);
+                articles.value = latest_data;
+            } else {
+                articles.value = await load_entries_index(props.credits);
+            }
+        } else {
+            articles.value = await load_entries_index(props.credits, true);
+        }
         isEntriesEncrypted.value = is_entries_encrypted();
     }
     catch (error) {
         ElMessageBox.alert('加载文章列表失败，请稍后重试。' + error, '错误', {
             confirmButtonText: '确定',
             type: 'error',
-        }).then(() => {}).catch(() => {})
+        }).then(() => { }).catch(() => { })
+        return false;
     } finally {
         isLoading.value = false;
     }

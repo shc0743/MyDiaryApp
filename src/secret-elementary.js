@@ -210,8 +210,8 @@ export class HTMLXMyDiaryAppFileReferenceElement extends HTMLElement {
     async #fetchData() {
         // 实际业务逻辑... 
         const id = this.getAttribute('data-id');
-        const type = this.getAttribute('data-type');
         const name = this.getAttribute('data-name');
+        let type = this.getAttribute('data-type');
         if (!id || !type || !name) throw new Error('缺少必要参数（这个错误是意料之外的！）'); // 实际上除非被非法篡改，这个错误是不会出现的
         const userCredentials = getscm();
         if (!userCredentials) throw '未登录';
@@ -234,6 +234,7 @@ export class HTMLXMyDiaryAppFileReferenceElement extends HTMLElement {
         if (file_size > 100 * 1024 * 1024 && (!type.startsWith('video'))) {
             throw '文件过大，无法预览。';
         }
+        if (type === 'video') type = 'video/mp4';
         await this.#preview.load(async (/** @type {number} */ start, /** @type {number} */ end) => {
             const resp = await fetch(await signit(target), {
                 headers: { Range: `bytes=${start}-${end - 1}` }

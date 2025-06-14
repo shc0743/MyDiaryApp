@@ -1,6 +1,9 @@
 <template>
     <div class="welcome-page">
         <h1 style="margin-top: 0;">欢迎使用我的日记应用</h1>
+        <template v-if="step === -5">
+            <p>拒绝访问。</p>
+        </template>
         <template v-if="step === 0">
             <p>正在加载，请稍候……</p>
         </template>
@@ -27,10 +30,12 @@
 <script setup>
 // 这里可以添加组件的逻辑
 import { ElMessage } from 'element-plus'
-import { onMounted, ref } from 'vue'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { is_entries_encrypted, load_entries_index } from '../entries'
-import { IsPINSet } from '../user.js'
+import { IsPINRejected, IsPINSet } from '../user.js'
+import { app_event } from '../eventing.js'
+import { nextTick } from 'vue'
 const router = useRouter()
 const props = defineProps({
     credits: {
@@ -48,11 +53,23 @@ const emit = defineEmits(['update-title'])
 onMounted(() => {
     emit('update-title', '欢迎')
     loadSteps()
+    const fn = () => nextTick(() => loadSteps());
+    app_event.add('ui::welcome', 'entries_updated', fn);
+    app_event.add('ui::welcome', 'pin_updated', fn);
+    app_event.add('ui::welcome', 'pin_rejected', fn);
+    app_event.add('ui::welcome', 'credits_updated', fn);
+})
+onBeforeUnmount(() => {
+    app_event.clear('ui::welcome');
 })
 
 const step = ref(0)
 async function loadSteps() {
     step.value = 0
+    if (IsPINRejected()) {
+        step.value = -5
+        return
+    }
     if (!props.credits.ak || !props.credits.sk || !props.credits.bucket || !props.credits.region || !props.credits.oss_url) {
         step.value = 1
         return
@@ -77,7 +94,7 @@ async function loadSteps() {
         console.error('[Welcome]', error);
         ElMessage.error(error);
     }
-} 
+}
 </script>
 
 <style scoped>

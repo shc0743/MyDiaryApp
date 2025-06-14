@@ -1,6 +1,7 @@
 import { sign_url } from "alioss-sign-v4-util";
 import { decrypt_data, encrypt_blob, decrypt_blob } from "simple-data-crypto/builder";
 import { u } from './user.js';
+import { app_event } from './eventing.js';
 
 let this_time_password = null;
 let is_entries_encrypted_ = false;
@@ -8,7 +9,7 @@ export function is_entries_encrypted() { return is_entries_encrypted_; }
 
 const dynamic_decrypt = async (data) => {
     const possible = (await u.getx('saved_passwords')) || [];
-    if (!possible.includes(this_time_password)) possible.splice(0, 0, this_time_password); // 优先使用上次输入的密码
+    if (this_time_password && !possible.includes(this_time_password)) possible.splice(0, 0, this_time_password); // 优先使用上次输入的密码
     for (const i of possible) try {
         const r = await (await decrypt_blob(data, i)).text();
         this_time_password = i;
@@ -25,6 +26,10 @@ const dynamic_decrypt = async (data) => {
 };
 export { dynamic_decrypt };
 export function set_this_time_password(p) { this_time_password = p; }
+
+function notify_entries_updated() {
+    app_event.dispatch('entries_updated');
+}
 
 
 export async function load_entries_index(credits, purge = false) {
@@ -55,6 +60,7 @@ export async function load_entries_index(credits, purge = false) {
             }
             // 检查返回的JSON数据是否符合指定格式
             data = JSON.parse(data);
+            notify_entries_updated();
             if (!data || typeof data !== 'object' || data.version !== 1 || data.schema_version !== 1 || data.type !== 'x-my-diary-app-entries-list' || !Array.isArray(data.entries)) {
                 return [];
             }
@@ -88,6 +94,7 @@ export async function load_entries_index(credits, purge = false) {
                 }),
             });
             if (resp.ok == false) throw -1;
+            notify_entries_updated();
             return await new Promise((resolve, reject) => {
                 queueMicrotask(() => load_entries_index(credits).then(resolve).catch(reject));
             });
@@ -135,6 +142,7 @@ export async function save_entries_index(credits, entry) {
         body,
     });
     if (resp.ok == false) throw `HTTP Error ${resp.status}: ${resp.statusText}`;
+    notify_entries_updated();
     return true
 }
 
@@ -210,10 +218,14 @@ export async function get_secret_default_id() {
     } catch { return null; }
 }
 
+const cached_secret_keys = new Map();
 /**
  * @param {string} id secret id
+ * @param {boolean} dont_cache 是否不缓存
  */
-export async function ask_secret_key_by_id(id) {
+export async function ask_secret_key_by_id(id, dont_cache = false) {
+    // 先尝试从缓存中获取
+    if (!dont_cache && cached_secret_keys.has(id)) return cached_secret_keys.get(id);
     const info = await get_secret_info(id);
     if (!info) {
         ElMessage.error('没有找到 Secret, 无法解密。');
@@ -242,7 +254,7 @@ export async function ask_secret_key_by_id(id) {
             await u.setx("saved_secret_passwords", saved);
         }
         // 不需要try catch，因为如果没有密码，会直接抛出错误
-
+        if (!dont_cache) cached_secret_keys.set(id, secret_encryption_key.value);
     } catch {
         ElMessage.error('解密失败。密码不正确。');
         return false; // 终止执行，避免后续错误

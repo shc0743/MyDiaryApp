@@ -1,5 +1,6 @@
 import { decrypt_data, encrypt_data, get_random_bytes, hexlify } from 'simple-data-crypto/builder';
 import { db } from './userdata.js';
+import { app_event } from './eventing.js';
 
 let user_pin = null, pin_rejected = false;
 const u = {
@@ -31,6 +32,7 @@ const u = {
         if (!await IsPINSet()) return await u.set(key, value);
         if (pin_rejected) throw new Error('Access denied.');
         if (!user_pin) if (!await askPIN()) throw new Error('Cancelled');
+        if (!value) return await u.set(key, value);
         return await u.set(key, await encrypt_data(JSON.stringify(value), user_pin, undefined, 65536));
     },
 };
@@ -55,6 +57,7 @@ export async function SetPIN(pin) {
     for (const i of PINProtected) {
         await u.setx(i, await u.get(i));
     }
+    app_event.dispatch('pin_updated');
 }
 export async function askPIN() {
     if (user_pin) return true; // 已经验证过了
@@ -65,11 +68,13 @@ export async function askPIN() {
             user = value;
         } catch {
             pin_rejected = true;
+            app_event.dispatch('pin_rejected');
             return false;
         }
         const pin = await u.get('pin');
         if (!pin) throw new Error('PIN is not set');
         user_pin = await decrypt_data(pin, user);
+        app_event.dispatch('pin_loaded');
         return true;
     }
     catch { return false; }
@@ -85,9 +90,14 @@ export async function ClearPIN() {
     }
     await u.delete('pin');
     user_pin = null;
+    app_event.dispatch('pin_updated');
 }
 export async function ChangePIN(new_pin) {
     if (!user_pin) if (!await askPIN()) throw new Error('Access denied.');
     const new_pin_encrypted = await encrypt_data(user_pin, new_pin);
     await u.set('pin', new_pin_encrypted);
+    app_event.dispatch('pin_updated');
+}
+export function IsPINRejected() {
+    return pin_rejected;
 }

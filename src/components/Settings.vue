@@ -250,7 +250,7 @@ async function showPassPhrase(item, k) {
     ElMessageBox.prompt('这是passphrase内容。', k, {
         confirmButtonText: '确定',
         type: 'info',
-        inputValue: typeof item === 'string' ? item : item.passphrase,
+        inputValue: typeof item === 'string' ? item : item?.passphrase,
         cancelButtonText: '取消',
     }).catch(() => { })
 }

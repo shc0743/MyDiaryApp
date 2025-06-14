@@ -39,9 +39,10 @@
 
 <script setup>
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { h, onMounted, ref } from 'vue'
+import { h, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { IsPINSet, u } from '../user.js';
+import { app_event } from '../eventing.js';
 
 const emit = defineEmits(['update-title', 'update-credits'])
 emit('update-title', '登入')
@@ -61,13 +62,22 @@ const props = defineProps({
 })
 
 const form_data = ref({
-    oss_url: props.credits.oss_url || '',
-    ak: props.credits.ak || '',
-    sk: props.credits.sk || '',
-    bucket: props.credits.bucket || '',
-    region: props.credits.region || '',
-    save_password: props.credits.sk ? true : false
+    oss_url: '',
+    ak: '',
+    sk: '',
+    bucket: '',
+    region: '',
+    save_password: false,
 })
+const init_form_data = async () => {
+    await new Promise(r => nextTick(r));
+    form_data.value.oss_url = props.credits.oss_url || ''
+    form_data.value.ak = props.credits.ak || ''
+    form_data.value.sk = props.credits.sk || ''
+    form_data.value.bucket = props.credits.bucket || ''
+    form_data.value.region = props.credits.region || ''
+    form_data.value.save_password = props.credits.sk ? true : false
+}
 
 const isSafe = ref(false)
 
@@ -76,6 +86,11 @@ onMounted(async () => {
         form_data.value.save_password = true // 安全地保存密码
         isSafe.value = true
     }
+    init_form_data();
+    app_event.add('ui::login', 'credits_updated', init_form_data)
+});
+onBeforeUnmount(() => {
+    app_event.clear('ui::login');
 })
 
 const handleSubmit = async () => {
@@ -86,6 +101,7 @@ const handleSubmit = async () => {
         }
         await u.setx('LogonData', data)
         emit('update-credits', form_data.value) // 传递新的 credits 值给父组件 (..)
+        app_event.dispatch('credits_updated');
         router.push('/welcome/')
     } catch (error) {
         ElMessageBox.alert('登入失败：' + error, '错误', { type: 'error', confirmButtonText: '好的' });
