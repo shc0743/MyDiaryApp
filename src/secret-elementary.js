@@ -181,7 +181,11 @@ export class HTMLXMyDiaryAppFileReferenceElement extends HTMLElement {
         autoload.addEventListener('change', () => {
             config.autoload = !!autoload.checked;
         });
-        secret_id.innerText = this.getAttribute('data-secret-id');
+        if (this.getAttribute('data-secret-id')) {
+            secret_id.innerText = this.getAttribute('data-secret-id');
+        } else {
+            secret_id.parentElement.style.display = 'none';
+        }
     }
     #load() {
         if (this.#loaded) return;
