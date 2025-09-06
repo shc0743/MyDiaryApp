@@ -158,6 +158,15 @@
                 }}</a></div>
             </ElCard>
         </el-dialog>
+
+        <dialog ref="dlgConfirmLeave" @cancel="dlgConfirmLeaveClose(0)">
+            <div style="font-weight: bold; font-size: 1.5em; text-align: center;">注意：有未保存的更改</div>
+            <div style="margin: 0.5em 0;">如果继续，这些更改将丢失。</div>
+            <div style="display: flex; justify-content: center;">
+                <el-button plain type="danger" @click="dlgConfirmLeaveClose(1)">放弃更改并继续</el-button>
+                <el-button plain type="success" @click="dlgConfirmLeaveClose(0)" autofocus>留在当前页面</el-button>
+            </div>
+        </dialog>
     </div>
 </template>
 
@@ -583,29 +592,49 @@ const save_article = async () => {
 }
 
 // 路由守卫
+const dlgConfirmLeave = ref(null);
+const dlgConfirmLeaveState = ref({});
+const dlgConfirmLeaveClose = (confirm) => {
+    confirm ? dlgConfirmLeaveState.value?.resolve?.() : dlgConfirmLeaveState.value?.reject?.();
+    dlgConfirmLeave.value.close();
+    dlgConfirmLeaveState.value = {};
+}
 onBeforeRouteLeave(async (to, from, next) => {
     // 如果文章已保存，直接放行
-    if (article_saved.value) {
+    if (article_saved.value || dlgConfirmLeaveState.value.confirmed) {
+        dlgConfirmLeaveState.value.confirmed = false; // 一次性标志位
         next();
         return;
     }
     try {
-        // 使用 Element Plus 的确认对话框
-        await ElMessageBox.confirm(
-            '当前文章中存在未保存的更改，如果继续，这些更改将丢失。',
-            '未保存的更改',
-            {
-                confirmButtonText: '放弃更改并继续',
-                cancelButtonText: '留在当前页面',
-                type: 'warning',
+        if (!dlgConfirmLeave.value.open) dlgConfirmLeave.value.showModal();
+        await new Promise((resolve, reject) => {
+            if (dlgConfirmLeaveState.value.reject) {
+                dlgConfirmLeaveState.value.reject();
+                dlgConfirmLeaveState.value = {};
             }
-        );
+            dlgConfirmLeaveState.value = { resolve, reject };
+        });
         // 用户点击了"确定" - 允许导航
         next();
     } catch (error) {
         // 用户点击了"取消"或关闭对话框 - 取消导航
         next(false);
     }
+    // 方案2：过于激进（主要是会影响“后退”按钮的逻辑）
+    // next(false); // 管你三七二十一先拦住再说！
+    // (new Promise((resolve, reject) => {
+    //     if (!dlgConfirmLeave.value.open) dlgConfirmLeave.value.showModal();
+    //     if (dlgConfirmLeaveState.value.reject) {
+    //         dlgConfirmLeaveState.value.reject(); // 处理可能的边界情况，先 reject 掉上一个请求
+    //         dlgConfirmLeaveState.value = {};
+    //     }
+    //     dlgConfirmLeaveState.value = { resolve, reject };
+    // })).then(() => {
+    //     // 用户确认了，我们手动重新导航
+    //     dlgConfirmLeaveState.value.confirmed = true;
+    //     router.replace(to);
+    // }).catch(() => { });
 });
 
 
