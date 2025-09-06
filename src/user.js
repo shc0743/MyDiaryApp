@@ -1,8 +1,9 @@
 import { decrypt_data, encrypt_data, get_random_bytes, hexlify } from 'simple-data-crypto/builder';
 import { db } from './userdata.js';
 import { app_event } from './eventing.js';
+import { IPC_Invoke, IPC_Register } from './ipcman.js';
 
-let user_pin = null, pin_rejected = false;
+let user_pin = null, pin_rejected = false, pin_tried_query_parent = false;
 const u = {
     get(key) { return db.get('config', key) },
     set(key, value) { return db.put('config', value, key) },
@@ -22,6 +23,12 @@ const u = {
         const data = await u.get(key);
         if (!await IsPINSet()) return data;
         if (pin_rejected) throw new Error('Access denied.');
+        if (!pin_tried_query_parent) {
+            pin_tried_query_parent = true;
+            if (window.opener) try {
+                user_pin = await IPC_Invoke(window.opener, 'user.pin.primary_key.query');
+            } catch { }
+        }
         if (!user_pin) if (!await askPIN()) return undefined;
         if (!data) return data; // 假值，说明此属性本就不存在
         try {
@@ -110,3 +117,6 @@ export async function ForgetPIN() {
     await u.delete(PINProtected);
     user_pin = null;
 }
+
+// 允许 IPC
+IPC_Register('user.pin.primary_key.query', () => user_pin);

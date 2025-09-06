@@ -232,7 +232,8 @@ function setDragLink(event, url) {
 }
 function OpenLinkInNewWindow(url) {
     requestAnimationFrame(() => {
-        window.open(url, '_blank').focus();
+        const winobj = window.open(url, '_blank');
+        winobj.focus();
     });
 }
 

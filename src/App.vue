@@ -17,16 +17,16 @@
             <ElMenu default-active="/" mode="vertical" @select="handleAppMenuSelect"
                 style="overflow: auto; height: 100%;">
                 <ElMenuItem index="#welcome">My Diary</ElMenuItem>
-                <ElMenuItem index="#article">文章列表</ElMenuItem>
+                <ElMenuItem index="#article">文章列表 [Ctrl+J]</ElMenuItem>
                 <ElMenuItem index="#date">日期列表</ElMenuItem>
                 <ElSubMenu index="#撰写文章">
                     <template #title>撰写文章</template>
                     <ElMenuItem index="#editor">文章编辑器</ElMenuItem>
-                    <ElMenuItem index="#new">新文章</ElMenuItem>
-                    <ElMenuItem index="#save">保存更改</ElMenuItem>
+                    <ElMenuItem index="#new">新文章 [Ctrl+N|Alt+N]</ElMenuItem>
+                    <ElMenuItem index="#save">保存更改 [Ctrl+S]</ElMenuItem>
                 </ElSubMenu>
                 <ElMenuItem index="#secm">Secret 管理</ElMenuItem>
-                <ElMenuItem index="#settings">设置</ElMenuItem>
+                <ElMenuItem index="#settings">设置 [Ctrl+,]</ElMenuItem>
                 <ElMenuItem index="#u">{{credits.sk ? "已登入" : "登入"}}</ElMenuItem>
                 <ElMenuItem index="#x">关闭菜单</ElMenuItem>
             </ElMenu>

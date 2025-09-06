@@ -12,6 +12,7 @@ import './user.js'
 import './drv.js'
 import './secret-elementary.js'
 import './webmanifest.js'
+import './ipcman.js'
 
 globalThis.appid = 'com.mydiary.mydiaryapp'
 globalThis.uuid = 'fddd697a-d914-4e6b-82f4-52bf7bab296b'
@@ -25,3 +26,5 @@ app.use(ElementPlus, {
 })
 app.use(router)
 app.mount('#app')
+
+import('./hotkey_manager.js');
