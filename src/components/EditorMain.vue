@@ -2,10 +2,13 @@
     <div class="editor-container" @keydown.ctrl.s.stop.prevent="save_article"
         @dragover="(checkIfDragIsAllowed($event) && (($event.dataTransfer.dropEffect = 'copy'), (isDragOver = true)))"
         @keydown.capture.esc="isDragOver = false"
+        @input="article_saved = false"
     >
         <Teleport to="body">
             <div v-if="isDragOver" @dragleave.self="isDragOver=isDragOver=false" @dragover="(checkIfDragIsAllowed($event))" @click.self="isDragOver=isDragOver=false" @drop.capture="onDrop" class="cover"><div inert style="pointer-events: none;">Drop</div></div>
         </Teleport>
+
+        <div :data-status="!article_saved" class="article-not-saved-tooltip" @click="ElMessage.warning('文章没有保存。')"></div>
 
         <div class="article-title bg-auto">
             <input type="text" v-model="article.title" placeholder="我的文章" class="bg-auto">
@@ -203,6 +206,8 @@ const secret_id_Edit = ref({ name: '' });
 const secret_encryption_key = ref('');
 const secrets_list = ref([]);
 
+const article_saved = ref(true);
+
 
 function checkIfDragIsAllowed(ev) {
     const types = ev.dataTransfer.types;
@@ -273,6 +278,7 @@ const load_article = async (id) => {
         await setupSecretId();
         artCreationTime.value = new Date();
         save_time.value = 0;
+        article_saved.value = true;
         return;
     }
     try {
@@ -551,6 +557,7 @@ const save_article_core = async () => {
         // ElMessage.success('文章保存成功');
         const d = new Date();
         save_time.value = d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0') + ':' + d.getSeconds().toString().padStart(2, '0');
+        article_saved.value = true;
     }
     catch (error) {
         ElMessageBox.alert('加载文章列表失败，请稍后重试。' + error, '错误', {
@@ -1025,6 +1032,26 @@ async function cleanupUnusedAttachments() {
 .attachment-item+.attachment-item {
     margin-top: 0.5em;
 }
+
+.article-not-saved-tooltip {
+    position: fixed;
+    background-color: /*hsl(49.32deg 100% 62.55%)*/rgb(255, 166, 0);
+    border-radius: 5px;
+    display: block;
+    width: 100px;
+    height: 10px;
+    left: 50%;
+    top: 0;
+    transform: translate(-50%, 0);
+    transition: all 0.5s;
+}
+.article-not-saved-tooltip[data-status="false"] {
+    transform: translate(-50%, -10px);
+}
+.article-not-saved-tooltip[data-status="true"] {
+    transform: translate(-50%, 0);
+}
+
 </style>
 
 <style>
