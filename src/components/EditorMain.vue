@@ -2,7 +2,7 @@
     <div class="editor-container" @keydown.ctrl.s.stop.prevent="save_article"
         @dragover="(checkIfDragIsAllowed($event) && (($event.dataTransfer.dropEffect = 'copy'), (isDragOver = true)))"
         @keydown.capture.esc="isDragOver = false"
-        @input="article_saved = false"
+        @input="article_saved = false" @paste="article_saved = false"
     >
         <Teleport to="body">
             <div v-if="isDragOver" @dragleave.self="isDragOver=isDragOver=false" @dragover="(checkIfDragIsAllowed($event))" @click.self="isDragOver=isDragOver=false" @drop.capture="onDrop" class="cover"><div inert style="pointer-events: none;">Drop</div></div>
@@ -163,7 +163,7 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, onBeforeRouteLeave } from 'vue-router'
 import Tiptap from './Tiptap.vue'
 import { User, CollectionTag, Folder, DocumentAdd, Clock, Lock, Link, Grid, Picture as Picture2, Setting, Switch } from '@element-plus/icons-vue'
 import { exportContent } from '../ossapi/filelistapi'
@@ -364,7 +364,10 @@ const load_article = async (id) => {
 const hasUnsavedChanges = () => {
     return !!article.value.title || !!article.value.content
 }
-defineExpose({ hasUnsavedChanges })
+const isSaved = () => {
+    return !!article_saved.value;
+}
+defineExpose({ hasUnsavedChanges, isSaved })
 
 const update_title = (() => {
     let t = String(props.articleId) || ''
@@ -380,7 +383,7 @@ onMounted(async () => {
     else {
         await setupSecretId();
     }
-    globalThis.myEditor = { save_article, editor };
+    globalThis.myEditor = { save_article, editor, isSaved };
 })
 onUnmounted(() => {
     setconf('design', false);
@@ -578,6 +581,35 @@ const save_article = async () => {
         is_saving.value = false;
     }
 }
+
+// 路由守卫
+onBeforeRouteLeave(async (to, from, next) => {
+    // 如果文章已保存，直接放行
+    if (article_saved.value) {
+        next();
+        return;
+    }
+    try {
+        // 使用 Element Plus 的确认对话框
+        await ElMessageBox.confirm(
+            '当前文章中存在未保存的更改，如果继续，这些更改将丢失。',
+            '未保存的更改',
+            {
+                confirmButtonText: '放弃更改并继续',
+                cancelButtonText: '留在当前页面',
+                type: 'warning',
+            }
+        );
+        // 用户点击了"确定" - 允许导航
+        next();
+    } catch (error) {
+        // 用户点击了"取消"或关闭对话框 - 取消导航
+        next(false);
+    }
+});
+
+
+// secret 管理
 
 async function updateSecretEncryption() {
     if (!secret_id_buffer.value) {
