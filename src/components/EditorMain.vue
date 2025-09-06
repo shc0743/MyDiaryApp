@@ -361,7 +361,7 @@ const hasUnsavedChanges = () => {
 defineExpose({ hasUnsavedChanges })
 
 const update_title = (() => {
-    let t = article.value?.title || ''
+    let t = String(props.articleId) || ''
     if (t.length > 10) t = t.substring(0, 10) + '…'
     emit('update-title', `文章编辑器 - [${t || '新文章'}]`)
 });
